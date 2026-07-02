@@ -23,7 +23,6 @@ The structure of this extension is based on [godot-jolt](https://github.com/godo
 - `SoftBody3D`
 - Per-pair collision exceptions (use collision layers/masks for now)
 - Changing a `PinJoint3D` anchor after creation (recreate the joint instead)
-- Editor picking support
 - More platforms and architectures (currently Linux, Windows, and macOS builds)
 - Performance benchmarking and tuning
 - Documentation
