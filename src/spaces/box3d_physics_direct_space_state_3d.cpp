@@ -386,57 +386,69 @@ bool Box3DPhysicsDirectSpaceState3D::test_body_motion(
 		return false;
 	}
 
-	int32_t local_shape = -1;
-	Box3DShapeImpl3D* first_shape = nullptr;
-	for (int32_t i = 0; i < p_body.get_shape_count(); i++) {
-		if (!p_body.is_shape_disabled(i)) {
-			first_shape = p_body.get_shape(i);
-			local_shape = i;
-			break;
-		}
-	}
-	if (first_shape == nullptr) {
-		p_result->travel = p_motion;
-		p_result->remainder = Vector3();
-		return false;
-	}
-
 	Box3DQueryFilter3D filter;
 	filter.filter.maskBits = (uint64_t)p_body.get_collision_mask();
 	filter.exclude.insert(p_body.get_rid());
+	if (auto* body = dynamic_cast<Box3DBodyImpl3D*>(&p_body)) {
+		for (const RID& exception : body->get_collision_exceptions()) {
+			filter.exclude.insert(exception);
+		}
+	}
 
-	const Box3DShapeProxy3D shape_proxy(first_shape, p_transform * p_body.get_shape_transform(local_shape), p_margin);
-	if (!shape_proxy.is_supported()) {
+	RayContext best_context;
+	best_context.filter = &filter;
+	int32_t best_local_shape = -1;
+	bool found_supported_shape = false;
+	bool found_collision = false;
+
+	for (int32_t i = 0; i < p_body.get_shape_count(); i++) {
+		if (p_body.is_shape_disabled(i)) {
+			continue;
+		}
+
+		Box3DShapeImpl3D* shape = p_body.get_shape(i);
+		if (shape == nullptr) {
+			continue;
+		}
+
+		const Box3DShapeProxy3D shape_proxy(shape, p_transform * p_body.get_shape_transform(i), p_margin);
+		if (!shape_proxy.is_supported()) {
+			continue;
+		}
+		found_supported_shape = true;
+
+		RayContext context;
+		context.filter = &filter;
+
+		b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion), filter.filter, cast_result_fcn, &context);
+
+		if (context.has_hit && (!found_collision || context.fraction < best_context.fraction)) {
+			best_context = context;
+			best_local_shape = i;
+			found_collision = true;
+		}
+	}
+
+	if (!found_supported_shape || !found_collision) {
 		p_result->travel = p_motion;
 		p_result->remainder = Vector3();
 		return false;
 	}
 
-	RayContext context;
-	context.filter = &filter;
+	p_result->travel = p_motion * best_context.fraction;
+	p_result->remainder = p_motion * (1.0f - best_context.fraction);
+	p_result->collision_safe_fraction = best_context.fraction;
+	p_result->collision_unsafe_fraction = best_context.fraction;
 
-	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion), filter.filter, cast_result_fcn, &context);
-
-	if (!context.has_hit) {
-		p_result->travel = p_motion;
-		p_result->remainder = Vector3();
-		return false;
-	}
-
-	p_result->travel = p_motion * context.fraction;
-	p_result->remainder = p_motion * (1.0f - context.fraction);
-	p_result->collision_safe_fraction = context.fraction;
-	p_result->collision_unsafe_fraction = context.fraction;
-
-	auto* other = context.object;
+	auto* other = best_context.object;
 	if (other != nullptr && p_max_collisions > 0) {
 		PhysicsServer3DExtensionMotionCollision& collision = p_result->collisions[0];
-		collision.position = b3_to_godot(context.point);
-		collision.normal = b3_to_godot(context.normal);
+		collision.position = b3_to_godot(best_context.point);
+		collision.normal = b3_to_godot(best_context.normal);
 		collision.collider = other->get_rid();
 		collision.collider_id = other->get_instance_id();
-		collision.collider_shape = context.shape_index;
-		collision.local_shape = local_shape;
+		collision.collider_shape = best_context.shape_index;
+		collision.local_shape = best_local_shape;
 		auto* other_body = dynamic_cast<Box3DBodyImpl3D*>(other);
 		if (other_body != nullptr) {
 			collision.collider_velocity = other_body->get_linear_velocity();

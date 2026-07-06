@@ -7,6 +7,8 @@
 
 #include <box3d/box3d.h>
 
+#include <godot_cpp/core/object.hpp>
+
 namespace {
 
 const Box3DBodyContact3D* get_contact_or_null(const Box3DBodyImpl3D* p_body, int32_t p_index) {
@@ -207,7 +209,8 @@ uint64_t Box3DPhysicsDirectBodyState3D::_get_contact_collider_id(int32_t p_index
 }
 
 Object* Box3DPhysicsDirectBodyState3D::_get_contact_collider_object(int32_t p_index) const {
-	return nullptr;
+	const Box3DBodyContact3D* contact = get_contact_or_null(body, p_index);
+	return contact != nullptr && contact->collider_id != 0 ? ObjectDB::get_instance(contact->collider_id) : nullptr;
 }
 
 int32_t Box3DPhysicsDirectBodyState3D::_get_contact_collider_shape(int32_t p_index) const {

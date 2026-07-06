@@ -16,10 +16,13 @@ This tracks features reviewed from `temp/` reference projects that are useful bu
 
 ## P1 - Next practical ports
 
-- Resolve `get_contact_collider_object()` to the Godot object instance when RID-to-object ownership is available in this extension layer.
-- Expand `body_test_motion()` to test all enabled shapes on a multi-shape body, returning the earliest blocker instead of the first enabled shape.
 - Return richer `collide_shape()` contact pairs when Box3D exposes enough manifold detail for a direct overlap query; current support reports overlapping shape origins.
 - Add focused Godot integration scenes that exercise contact callbacks, exceptions, ray pickability, cylinder queries, and multi-shape motion.
+
+## P1 - Implemented follow-ups
+
+- Resolve `get_contact_collider_object()` to the Godot object instance when RID-to-object ownership is available in this extension layer.
+- Expand `body_test_motion()` to test all enabled shapes on a multi-shape body, returning the earliest blocker instead of the first enabled shape.
 
 ## P2 - Larger follow-up projects
 
