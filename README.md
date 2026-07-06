@@ -9,19 +9,19 @@ The structure of this extension is based on [godot-jolt](https://github.com/godo
 ## What works
 
 - Rigid, static, and kinematic bodies
-- Shapes: box, sphere, capsule, convex polygon, concave polygon (trimesh), heightmap, and world boundary
+- Shapes: box, sphere, capsule, cylinder, convex polygon, concave polygon (trimesh), heightmap, and world boundary
 - Areas, including overlap events and gravity/damping overrides
 - Direct space state queries: ray casts, point and shape intersection, shape casts (`cast_motion`), `collide_shape`, and `rest_info`
 - `body_test_motion`, so `CharacterBody3D` and `move_and_slide()` work
+- Collision exceptions, collision layers/masks, ray pickability, contact reports, and debug contacts
 - Joints: pin, hinge, and slider
 - A small test project (`test_project/`) with demo and stress scenes
 
 ## What's left to do
 
-- Cylinder and separation ray shapes (not supported by Box3D)
+- Separation ray shapes (not supported by Box3D)
 - ConeTwist and Generic6DOF joints
 - `SoftBody3D`
-- Per-pair collision exceptions (use collision layers/masks for now)
 - Changing a `PinJoint3D` anchor after creation (recreate the joint instead)
 - More platforms and architectures (currently Linux, Windows, and macOS builds)
 - Performance benchmarking and tuning
@@ -41,6 +41,18 @@ cmake --build build
 ```
 
 The resulting library is placed in `bin/` and loaded via `godot-box3d.gdextension`. Copy `bin/` and the `.gdextension` file into your project, then select the Box3D physics server in your project settings.
+
+## Test Project
+
+The `test_project/` folder contains headless smoke tests and a playable demo scene. For example:
+
+```sh
+godot --headless --path test_project --script res://physics_contract_test.gd
+godot --headless --path test_project --script res://fall_test.gd
+godot --headless --path test_project --script res://settle_test.gd
+godot --headless --path test_project --script res://area_test.gd
+godot --headless --path test_project --script res://joint_test.gd
+```
 
 ## Contributing
 

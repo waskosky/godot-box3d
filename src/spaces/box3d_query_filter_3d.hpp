@@ -1,5 +1,6 @@
 #pragma once
 
+#include <godot_cpp/classes/physics_direct_space_state3d_extension.hpp>
 #include <godot_cpp/templates/hash_set.hpp>
 #include <godot_cpp/variant/rid.hpp>
 
@@ -14,6 +15,7 @@ using namespace godot;
 struct Box3DQueryFilter3D {
 	b3QueryFilter filter = b3DefaultQueryFilter();
 	HashSet<RID> exclude;
+	const PhysicsDirectSpaceState3DExtension* direct_state = nullptr;
 	bool collide_with_bodies = true;
 	bool collide_with_areas = false;
 	bool pick_ray = false;
@@ -26,5 +28,7 @@ struct Box3DQueryFilter3D {
 		filter.maskBits = (uint64_t)p_collision_mask;
 	}
 
-	bool should_exclude(const RID& p_rid) const { return exclude.has(p_rid); }
+	bool should_exclude(const RID& p_rid) const {
+		return exclude.has(p_rid) || (direct_state != nullptr && direct_state->is_body_excluded_from_query(p_rid));
+	}
 };
