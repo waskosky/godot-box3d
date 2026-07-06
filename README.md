@@ -48,6 +48,7 @@ The `test_project/` folder contains headless smoke tests and a playable demo sce
 
 ```sh
 godot --headless --path test_project --script res://physics_contract_test.gd
+godot --headless --path test_project --script res://ray_pickability_test.gd
 godot --headless --path test_project --script res://fall_test.gd
 godot --headless --path test_project --script res://settle_test.gd
 godot --headless --path test_project --script res://area_test.gd

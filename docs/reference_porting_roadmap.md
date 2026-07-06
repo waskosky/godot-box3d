@@ -14,10 +14,6 @@ This tracks features reviewed from `temp/` reference projects that are useful bu
 - Invoke the body force integration callback during the space step before the integration pass.
 - Report basic process counters from Box3D world counters.
 
-## P1 - Next practical ports
-
-- Add an editor or viewport object-picking test scene for ray pickability; public direct-space ray queries do not exercise Godot's `pick_ray` path.
-
 ## P1 - Implemented follow-ups
 
 - Resolve `get_contact_collider_object()` to the Godot object instance when RID-to-object ownership is available in this extension layer.
@@ -26,6 +22,7 @@ This tracks features reviewed from `temp/` reference projects that are useful bu
 - Honor `PhysicsShapeQueryParameters3D.exclude` through the extension query-exclusion hook in direct-space callbacks.
 - Add focused headless Godot integration coverage for contact callbacks, collision exceptions, cylinder queries, query exclusions, `collide_shape()` pairs, and multi-shape motion.
 - Report all `SoftBody3D` server APIs as explicitly unsupported while keeping the methods inert and returning safe defaults.
+- Add viewport object-picking coverage for body and area ray pickability; this exercises Godot's `pick_ray` path instead of only public direct-space ray queries.
 
 ## P2 - Larger follow-up projects
 
