@@ -5,6 +5,7 @@
 #include <godot_cpp/classes/physics_direct_body_state3d.hpp>
 #include <godot_cpp/classes/physics_server3d_extension.hpp>
 #include <godot_cpp/classes/physics_server3d_rendering_server_handler.hpp>
+#include <godot_cpp/templates/local_vector.hpp>
 
 using namespace godot;
 
@@ -271,5 +272,5 @@ private:
 	RID_PtrOwner<Box3DShapeImpl3D> shape_owner;
 	RID_PtrOwner<Box3DJointImpl3D> joint_owner;
 
-	HashSet<Box3DSpace3D*> active_spaces;
+	LocalVector<Box3DSpace3D*> active_spaces;
 };

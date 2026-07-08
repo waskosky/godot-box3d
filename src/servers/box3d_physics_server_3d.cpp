@@ -34,6 +34,33 @@ constexpr const char* BOX3D_CONE_TWIST_UNSUPPORTED_MESSAGE =
 constexpr const char* BOX3D_GENERIC_6DOF_UNSUPPORTED_MESSAGE =
 		"Box3D: Generic6DOFJoint3D is not supported in this version of the Box3D extension.";
 
+template <typename T>
+bool contains_item(const LocalVector<T*>& p_items, const T* p_item) {
+	for (T* item : p_items) {
+		if (item == p_item) {
+			return true;
+		}
+	}
+	return false;
+}
+
+template <typename T>
+void append_unique(LocalVector<T*>& r_items, T* p_item) {
+	if (p_item != nullptr && !contains_item(r_items, p_item)) {
+		r_items.push_back(p_item);
+	}
+}
+
+template <typename T>
+void erase_preserving_order(LocalVector<T*>& r_items, const T* p_item) {
+	for (uint32_t i = 0; i < r_items.size(); i++) {
+		if (r_items[i] == p_item) {
+			r_items.remove_at(i);
+			return;
+		}
+	}
+}
+
 }
 
 Box3DPhysicsServer3D::Box3DPhysicsServer3D() {
@@ -178,9 +205,9 @@ void Box3DPhysicsServer3D::_space_set_active(const RID& p_space, bool p_active) 
 	ERR_FAIL_NULL(space);
 	space->set_active(p_active);
 	if (p_active) {
-		active_spaces.insert(space);
+		append_unique(active_spaces, space);
 	} else {
-		active_spaces.erase(space);
+		erase_preserving_order(active_spaces, space);
 	}
 }
 
@@ -1297,7 +1324,7 @@ void Box3DPhysicsServer3D::_free_rid(const RID& p_rid) {
 			memdelete(default_area);
 			area_owner.free(default_area_rid);
 		}
-		active_spaces.erase(space);
+		erase_preserving_order(active_spaces, space);
 		memdelete(space);
 		space_owner.free(p_rid);
 		return;

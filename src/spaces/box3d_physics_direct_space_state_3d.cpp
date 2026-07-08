@@ -12,23 +12,33 @@
 
 #include <box3d/box3d.h>
 
-#include <godot_cpp/templates/local_vector.hpp>
+#include <algorithm>
+#include <vector>
 
 namespace {
 
+struct ShapeQueryHit {
+	RID rid;
+	uint64_t collider_id = 0;
+	int32_t shape = -1;
+};
+
+struct CollideShapeHit {
+	RID rid;
+	int32_t shape = -1;
+	Vector3 query_point;
+	Vector3 collider_point;
+};
+
 struct OverlapContext {
 	const Box3DQueryFilter3D* filter = nullptr;
-	PhysicsServer3DExtensionShapeResult* results = nullptr;
-	int32_t max_results = 0;
-	int32_t count = 0;
+	std::vector<ShapeQueryHit>* hits = nullptr;
 };
 
 struct CollideShapeContext {
 	const Box3DQueryFilter3D* filter = nullptr;
 	const b3ShapeProxy* query_proxy = nullptr;
-	Vector3* results = nullptr;
-	int32_t max_pairs = 0;
-	int32_t count = 0;
+	std::vector<CollideShapeHit>* hits = nullptr;
 };
 
 Box3DShapedObjectImpl3D* object_from_shape(b3ShapeId p_shape_id) {
@@ -62,11 +72,40 @@ bool should_report(b3ShapeId p_shape_id, const Box3DQueryFilter3D& p_filter, Box
 	return true;
 }
 
+bool shape_hit_less(const ShapeQueryHit& p_a, const ShapeQueryHit& p_b) {
+	if (p_a.rid.get_id() == p_b.rid.get_id()) {
+		return p_a.shape < p_b.shape;
+	}
+	return p_a.rid.get_id() < p_b.rid.get_id();
+}
+
+bool collide_hit_less(const CollideShapeHit& p_a, const CollideShapeHit& p_b) {
+	if (p_a.rid.get_id() == p_b.rid.get_id()) {
+		return p_a.shape < p_b.shape;
+	}
+	return p_a.rid.get_id() < p_b.rid.get_id();
+}
+
+bool hit_key_less(
+		const Box3DShapedObjectImpl3D* p_a,
+		int32_t p_a_shape,
+		int32_t p_a_face,
+		const Box3DShapedObjectImpl3D* p_b,
+		int32_t p_b_shape,
+		int32_t p_b_face) {
+	const uint64_t a_rid = p_a != nullptr ? p_a->get_rid().get_id() : 0;
+	const uint64_t b_rid = p_b != nullptr ? p_b->get_rid().get_id() : 0;
+	if (a_rid != b_rid) {
+		return a_rid < b_rid;
+	}
+	if (p_a_shape != p_b_shape) {
+		return p_a_shape < p_b_shape;
+	}
+	return p_a_face < p_b_face;
+}
+
 bool overlap_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	auto* ctx = static_cast<OverlapContext*>(p_context);
-	if (ctx->count >= ctx->max_results) {
-		return false;
-	}
 
 	Box3DShapedObjectImpl3D* object = nullptr;
 	int32_t shape_index = -1;
@@ -74,11 +113,11 @@ bool overlap_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 		return true;
 	}
 
-	PhysicsServer3DExtensionShapeResult& result = ctx->results[ctx->count];
-	result.rid = object->get_rid();
-	result.collider_id = object->get_instance_id();
-	result.shape = shape_index;
-	ctx->count++;
+	ShapeQueryHit hit;
+	hit.rid = object->get_rid();
+	hit.collider_id = object->get_instance_id();
+	hit.shape = shape_index;
+	ctx->hits->push_back(hit);
 	return true;
 }
 
@@ -166,9 +205,6 @@ bool get_contact_pair(
 
 bool collide_shape_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	auto* ctx = static_cast<CollideShapeContext*>(p_context);
-	if (ctx->count >= ctx->max_pairs) {
-		return false;
-	}
 
 	Box3DShapedObjectImpl3D* object = nullptr;
 	int32_t shape_index = -1;
@@ -180,12 +216,14 @@ bool collide_shape_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	Vector3 collider_point;
 	get_contact_pair(p_shape_id, *ctx->query_proxy, query_point, collider_point);
 
-	const int32_t point_index = ctx->count * 2;
-	ctx->results[point_index] = query_point;
-	ctx->results[point_index + 1] = collider_point;
-	ctx->count++;
+	CollideShapeHit hit;
+	hit.rid = object->get_rid();
+	hit.shape = shape_index;
+	hit.query_point = query_point;
+	hit.collider_point = collider_point;
+	ctx->hits->push_back(hit);
 
-	return ctx->count < ctx->max_pairs;
+	return true;
 }
 
 struct RayContext {
@@ -209,7 +247,11 @@ float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, floa
 	if (!should_report(p_shape_id, *ctx->filter, object, shape_index)) {
 		return -1.0f;
 	}
-	if (ctx->has_hit && p_fraction >= ctx->fraction) {
+	if (ctx->has_hit && p_fraction > ctx->fraction) {
+		return ctx->fraction;
+	}
+	if (ctx->has_hit && p_fraction == ctx->fraction &&
+			!hit_key_less(object, shape_index, p_triangle_index, ctx->object, ctx->shape_index, ctx->face_index)) {
 		return ctx->fraction;
 	}
 
@@ -238,6 +280,24 @@ void fill_rest_info(const RayContext& p_context, PhysicsServer3DExtensionShapeRe
 	if (body != nullptr) {
 		p_info->linear_velocity = body->get_linear_velocity();
 	}
+}
+
+int32_t copy_shape_hits(
+		std::vector<ShapeQueryHit>& r_hits,
+		PhysicsServer3DExtensionShapeResult* p_results,
+		int32_t p_max_results) {
+	if (p_results == nullptr || p_max_results <= 0) {
+		return 0;
+	}
+	std::sort(r_hits.begin(), r_hits.end(), shape_hit_less);
+	const int32_t result_count = MIN((int32_t)r_hits.size(), p_max_results);
+	for (int32_t i = 0; i < result_count; i++) {
+		const ShapeQueryHit& hit = r_hits[(size_t)i];
+		p_results[i].rid = hit.rid;
+		p_results[i].collider_id = hit.collider_id;
+		p_results[i].shape = hit.shape;
+	}
+	return result_count;
 }
 
 } // namespace
@@ -304,12 +364,12 @@ int32_t Box3DPhysicsDirectSpaceState3D::_intersect_point(
 
 	OverlapContext context;
 	context.filter = &filter;
-	context.results = p_results;
-	context.max_results = p_max_results;
+	std::vector<ShapeQueryHit> hits;
+	context.hits = &hits;
 
 	b3World_OverlapShape(space->get_world_id(), b3Vec3_zero, &proxy, filter.filter, overlap_result_fcn, &context);
 
-	return context.count;
+	return copy_shape_hits(hits, p_results, p_max_results);
 }
 
 int32_t Box3DPhysicsDirectSpaceState3D::_intersect_shape(
@@ -337,12 +397,12 @@ int32_t Box3DPhysicsDirectSpaceState3D::_intersect_shape(
 
 	OverlapContext context;
 	context.filter = &filter;
-	context.results = p_results;
-	context.max_results = p_max_results;
+	std::vector<ShapeQueryHit> hits;
+	context.hits = &hits;
 
 	b3World_OverlapShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), filter.filter, overlap_result_fcn, &context);
 
-	return context.count;
+	return copy_shape_hits(hits, p_results, p_max_results);
 }
 
 bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
@@ -422,15 +482,25 @@ bool Box3DPhysicsDirectSpaceState3D::_collide_shape(
 	CollideShapeContext context;
 	context.filter = &filter;
 	context.query_proxy = &shape_proxy.get_proxy();
-	context.results = static_cast<Vector3*>(p_results);
-	context.max_pairs = p_max_results;
+	std::vector<CollideShapeHit> hits;
+	context.hits = &hits;
 
 	b3World_OverlapShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), filter.filter, collide_shape_result_fcn, &context);
 
-	if (p_result_count != nullptr) {
-		*p_result_count = context.count;
+	std::sort(hits.begin(), hits.end(), collide_hit_less);
+	const int32_t result_count = MIN((int32_t)hits.size(), p_max_results);
+	Vector3* results = static_cast<Vector3*>(p_results);
+	for (int32_t i = 0; i < result_count; i++) {
+		const CollideShapeHit& hit = hits[(size_t)i];
+		const int32_t point_index = i * 2;
+		results[point_index] = hit.query_point;
+		results[point_index + 1] = hit.collider_point;
 	}
-	return context.count > 0;
+
+	if (p_result_count != nullptr) {
+		*p_result_count = result_count;
+	}
+	return result_count > 0;
 }
 
 bool Box3DPhysicsDirectSpaceState3D::_rest_info(

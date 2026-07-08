@@ -25,6 +25,7 @@ ln -sf "$extension_library" "$test_addon_bin/libgodot-box3d.so"
 
 tests=(
 	physics_contract_test.gd
+	determinism_test.gd
 	ray_pickability_test.gd
 	fall_test.gd
 	settle_test.gd

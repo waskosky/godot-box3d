@@ -1,7 +1,6 @@
 #pragma once
 
 #include <godot_cpp/classes/physics_server3d.hpp>
-#include <godot_cpp/templates/hash_set.hpp>
 #include <godot_cpp/templates/local_vector.hpp>
 #include <godot_cpp/variant/callable.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
@@ -60,13 +59,13 @@ public:
 
 	int32_t get_process_info(PhysicsServer3D::ProcessInfo p_process_info) const;
 
-	void register_body(Box3DBodyImpl3D* p_body) { bodies.insert(p_body); }
+	void register_body(Box3DBodyImpl3D* p_body);
 
-	void unregister_body(Box3DBodyImpl3D* p_body) { bodies.erase(p_body); }
+	void unregister_body(Box3DBodyImpl3D* p_body);
 
-	void register_area(Box3DAreaImpl3D* p_area) { areas.insert(p_area); }
+	void register_area(Box3DAreaImpl3D* p_area);
 
-	void unregister_area(Box3DAreaImpl3D* p_area) { areas.erase(p_area); }
+	void unregister_area(Box3DAreaImpl3D* p_area);
 
 	// Applies area gravity/damp overrides + constant-force accumulators, steps the world,
 	// then immediately drains every Box3D event array into the pending queues below.
@@ -113,8 +112,8 @@ private:
 	Box3DPhysicsDirectSpaceState3D* direct_state = nullptr;
 	Box3DAreaImpl3D* default_area = nullptr;
 
-	HashSet<Box3DBodyImpl3D*> bodies;
-	HashSet<Box3DAreaImpl3D*> areas;
+	LocalVector<Box3DBodyImpl3D*> bodies;
+	LocalVector<Box3DAreaImpl3D*> areas;
 
 	LocalVector<PendingStateSync> pending_state_syncs;
 	LocalVector<PendingAreaEvent> pending_area_events;

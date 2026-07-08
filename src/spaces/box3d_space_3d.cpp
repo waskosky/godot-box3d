@@ -19,6 +19,33 @@ constexpr int SUB_STEP_COUNT = 4;
 
 using AreaSpaceOverrideMode = PhysicsServer3D::AreaSpaceOverrideMode;
 
+template <typename T>
+bool contains_item(const LocalVector<T*>& p_items, const T* p_item) {
+	for (T* item : p_items) {
+		if (item == p_item) {
+			return true;
+		}
+	}
+	return false;
+}
+
+template <typename T>
+void append_unique(LocalVector<T*>& r_items, T* p_item) {
+	if (p_item != nullptr && !contains_item(r_items, p_item)) {
+		r_items.push_back(p_item);
+	}
+}
+
+template <typename T>
+void erase_preserving_order(LocalVector<T*>& r_items, const T* p_item) {
+	for (uint32_t i = 0; i < r_items.size(); i++) {
+		if (r_items[i] == p_item) {
+			r_items.remove_at(i);
+			return;
+		}
+	}
+}
+
 bool collision_layers_match(const Box3DShapedObjectImpl3D* p_a, const Box3DShapedObjectImpl3D* p_b) {
 	return p_a != nullptr && p_b != nullptr &&
 			(p_a->get_collision_mask() & p_b->get_collision_layer()) != 0 &&
@@ -107,7 +134,7 @@ bool area_has_active_override(const Box3DAreaImpl3D* p_area) {
 			p_area->get_angular_damp_mode() != PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED;
 }
 
-std::vector<Box3DAreaImpl3D*> collect_overriding_areas(const HashSet<Box3DAreaImpl3D*>& p_areas, const Box3DBodyImpl3D* p_body) {
+std::vector<Box3DAreaImpl3D*> collect_overriding_areas(const LocalVector<Box3DAreaImpl3D*>& p_areas, const Box3DBodyImpl3D* p_body) {
 	std::vector<Box3DAreaImpl3D*> overriding_areas;
 	for (Box3DAreaImpl3D* area : p_areas) {
 		if (area->is_default_area() || !area_has_active_override(area) || !area_overlaps_body(area, p_body)) {
@@ -207,6 +234,22 @@ int32_t Box3DSpace3D::get_process_info(PhysicsServer3D::ProcessInfo p_process_in
 
 void Box3DSpace3D::set_default_area(Box3DAreaImpl3D* p_area) {
 	default_area = p_area;
+}
+
+void Box3DSpace3D::register_body(Box3DBodyImpl3D* p_body) {
+	append_unique(bodies, p_body);
+}
+
+void Box3DSpace3D::unregister_body(Box3DBodyImpl3D* p_body) {
+	erase_preserving_order(bodies, p_body);
+}
+
+void Box3DSpace3D::register_area(Box3DAreaImpl3D* p_area) {
+	append_unique(areas, p_area);
+}
+
+void Box3DSpace3D::unregister_area(Box3DAreaImpl3D* p_area) {
+	erase_preserving_order(areas, p_area);
 }
 
 void Box3DSpace3D::step(float p_step) {
