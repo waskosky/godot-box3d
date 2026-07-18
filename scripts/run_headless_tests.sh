@@ -4,9 +4,19 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 build_dir="${BUILD_DIR:-$repo_root/build}"
 godot_bin="${GODOT_BIN:-godot}"
-extension_library="$repo_root/bin/libgodot-box3d.so"
 test_addon_bin="$repo_root/test_project/addons/godot-box3d/bin"
+godot_metadata_dir="$repo_root/test_project/.godot"
 jobs="${JOBS:-$(nproc 2>/dev/null || printf '4')}"
+
+case "$(uname -s)" in
+	Darwin)
+		extension_filename="libgodot-box3d.dylib"
+		;;
+	*)
+		extension_filename="libgodot-box3d.so"
+		;;
+esac
+extension_library="$repo_root/bin/$extension_filename"
 
 export CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-$jobs}"
 if [[ -z "${MAKEFLAGS:-}" ]]; then
@@ -20,10 +30,16 @@ fi
 cmake -S "$repo_root" -B "$build_dir"
 cmake --build "$build_dir" --target godot-box3d --parallel "$jobs"
 
-mkdir -p "$test_addon_bin"
-ln -sf "$extension_library" "$test_addon_bin/libgodot-box3d.so"
+mkdir -p "$test_addon_bin" "$godot_metadata_dir"
+ln -sf "$extension_library" "$test_addon_bin/$extension_filename"
+
+# Running a script directly does not scan the project for GDExtensions. Register the
+# extension explicitly so CI cannot silently fall back to GodotPhysics3D.
+printf '%s\n' 'res://addons/godot-box3d/godot-box3d.gdextension' > "$godot_metadata_dir/extension_list.cfg"
 
 tests=(
+	backend_activation_test.gd
+	review_regression_test.gd
 	physics_contract_test.gd
 	ray_pickability_test.gd
 	fall_test.gd

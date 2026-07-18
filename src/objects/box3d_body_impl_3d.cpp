@@ -12,6 +12,11 @@ Box3DBodyImpl3D::~Box3DBodyImpl3D() {
 	}
 }
 
+void Box3DBodyImpl3D::set_space(Box3DSpace3D* p_space) {
+	clear_runtime_area_state();
+	Box3DShapedObjectImpl3D::set_space(p_space);
+}
+
 Box3DPhysicsDirectBodyState3D* Box3DBodyImpl3D::get_direct_state_or_null() {
 	if (direct_state == nullptr) {
 		direct_state = memnew(Box3DPhysicsDirectBodyState3D);
@@ -392,11 +397,17 @@ void Box3DBodyImpl3D::pre_step() {
 }
 
 void Box3DBodyImpl3D::add_collision_exception(const RID& p_excepted_body) {
+	if (collision_exceptions.has(p_excepted_body)) {
+		return;
+	}
 	collision_exceptions.insert(p_excepted_body);
+	refilter_shapes();
 }
 
 void Box3DBodyImpl3D::remove_collision_exception(const RID& p_excepted_body) {
-	collision_exceptions.erase(p_excepted_body);
+	if (collision_exceptions.erase(p_excepted_body)) {
+		refilter_shapes();
+	}
 }
 
 bool Box3DBodyImpl3D::has_collision_exception(const RID& p_excepted_body) const {

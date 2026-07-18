@@ -116,13 +116,13 @@ func _test_query_contract() -> void:
 func _setup_multishape_motion_contract() -> void:
 	var wall: StaticBody3D = StaticBody3D.new()
 	wall.name = "MultiShapeWall"
-	wall.position = Vector3(3, 0, 0)
+	wall.position = Vector3(3, 0, 10)
 	wall.add_child(_make_box_shape(Vector3(0.5, 2, 2)))
 	root.add_child(wall)
 
 	var mover: CharacterBody3D = CharacterBody3D.new()
 	mover.name = "MultiShapeMover"
-	mover.position = Vector3.ZERO
+	mover.position = Vector3(0, 0, 10)
 
 	var first_shape: CollisionShape3D = _make_box_shape(Vector3(0.5, 0.5, 0.5))
 	mover.add_child(first_shape)
@@ -197,11 +197,13 @@ func _setup_area_damping_contract() -> void:
 	area.set_angular_damp_space_override_mode(Area3D.SPACE_OVERRIDE_REPLACE)
 	area.linear_damp = 8.0
 	area.angular_damp = 8.0
+	area.position = Vector3(20, 0, 0)
 	area.add_child(_make_box_shape(Vector3(6, 6, 6)))
 	root.add_child(area)
 
 	damping_body = RigidBody3D.new()
 	damping_body.name = "DampingBody"
+	damping_body.position = Vector3(20, 0, 0)
 	damping_body.gravity_scale = 0.0
 	damping_body.linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
 	damping_body.angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
@@ -215,5 +217,5 @@ func _setup_area_damping_contract() -> void:
 
 
 func _test_area_damping_contract() -> void:
-	_assert_result(damping_body.linear_velocity.length() < 4.0, "Area3D linear damping override slows a body with zero body damping")
-	_assert_result(damping_body.angular_velocity.length() < 4.0, "Area3D angular damping override slows a body with zero body damping")
+	_assert_result(damping_body.linear_velocity.length() > 8.0, "body REPLACE mode with zero linear damping overrides Area3D damping")
+	_assert_result(damping_body.angular_velocity.length() > 8.0, "body REPLACE mode with zero angular damping overrides Area3D damping")

@@ -5,6 +5,7 @@
 #include "../objects/box3d_body_impl_3d.hpp"
 #include "../objects/box3d_physics_direct_body_state_3d.hpp"
 #include "../objects/box3d_shaped_object_impl_3d.hpp"
+#include "../servers/box3d_physics_server_3d.hpp"
 #include "box3d_physics_direct_space_state_3d.hpp"
 
 #include <box3d/box3d.h>
@@ -80,25 +81,21 @@ bool apply_area_space_override(AreaSpaceOverrideMode p_mode, const T& p_area_val
 template <typename T, typename ValueGetter, typename ModeGetter>
 T calculate_area_override_value(
 		const std::vector<Box3DAreaImpl3D*>& p_areas,
-		T p_base_value,
+		T p_default_value,
 		ValueGetter p_value_getter,
 		ModeGetter p_mode_getter) {
-	T value = p_base_value;
+	T value{};
 	for (const Box3DAreaImpl3D* area : p_areas) {
 		if (apply_area_space_override(p_mode_getter(area), p_value_getter(area), value)) {
-			break;
+			return value;
 		}
 	}
+	value += p_default_value;
 	return value;
 }
 
-bool area_overlaps_body(const Box3DAreaImpl3D* p_area, const Box3DBodyImpl3D* p_body) {
-	for (const KeyValue<Box3DShapedObjectImpl3D*, int32_t>& overlap : p_area->get_overlaps()) {
-		if (overlap.key == p_body) {
-			return true;
-		}
-	}
-	return false;
+bool area_overlaps_body(const Box3DAreaImpl3D* p_area, Box3DBodyImpl3D* p_body) {
+	return p_area->get_overlaps().has(p_body);
 }
 
 bool area_has_active_override(const Box3DAreaImpl3D* p_area) {
@@ -107,7 +104,7 @@ bool area_has_active_override(const Box3DAreaImpl3D* p_area) {
 			p_area->get_angular_damp_mode() != PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED;
 }
 
-std::vector<Box3DAreaImpl3D*> collect_overriding_areas(const HashSet<Box3DAreaImpl3D*>& p_areas, const Box3DBodyImpl3D* p_body) {
+std::vector<Box3DAreaImpl3D*> collect_overriding_areas(const HashSet<Box3DAreaImpl3D*>& p_areas, Box3DBodyImpl3D* p_body) {
 	std::vector<Box3DAreaImpl3D*> overriding_areas;
 	for (Box3DAreaImpl3D* area : p_areas) {
 		if (area->is_default_area() || !area_has_active_override(area) || !area_overlaps_body(area, p_body)) {
@@ -217,21 +214,41 @@ void Box3DSpace3D::step(float p_step) {
 
 	_apply_area_overrides(default_gravity);
 
+	LocalVector<RID> body_rids;
+	body_rids.reserve(bodies.size());
 	for (Box3DBodyImpl3D* body : bodies) {
-		if (body->get_force_integration_callback().is_valid()) {
+		body_rids.push_back(body->get_rid());
+	}
+
+	// User integration callbacks may detach or free bodies. Resolve a RID snapshot
+	// before and after each callback so mutations cannot invalidate HashSet iteration
+	// or leave us using a stale body pointer.
+	for (const RID& body_rid : body_rids) {
+		Box3DBodyImpl3D* body = Box3DPhysicsServer3D::get_singleton()->get_body(body_rid);
+		if (body == nullptr || body->get_space() != this) {
+			continue;
+		}
+
+		const Callable callback = body->get_force_integration_callback();
+		if (callback.is_valid()) {
 			Box3DPhysicsDirectBodyState3D* state = body->get_direct_state_or_null();
+			const Variant userdata = body->get_force_integration_userdata();
 			Array arguments;
-			if (body->get_force_integration_userdata().get_type() == Variant::NIL) {
+			if (userdata.get_type() == Variant::NIL) {
 				arguments.resize(1);
 				arguments[0] = state;
 			} else {
 				arguments.resize(2);
 				arguments[0] = state;
-				arguments[1] = body->get_force_integration_userdata();
+				arguments[1] = userdata;
 			}
-			body->get_force_integration_callback().callv(arguments);
+			callback.callv(arguments);
 		}
-		body->pre_step();
+
+		body = Box3DPhysicsServer3D::get_singleton()->get_body(body_rid);
+		if (body != nullptr && body->get_space() == this) {
+			body->pre_step();
+		}
 	}
 
 	b3World_Step(world_id, p_step, SUB_STEP_COUNT);
@@ -246,6 +263,9 @@ void Box3DSpace3D::step(float p_step) {
 }
 
 void Box3DSpace3D::_apply_area_overrides(const Vector3& p_default_gravity) {
+	const real_t default_linear_damping = default_area != nullptr ? (real_t)default_area->get_linear_damp() : 0.0;
+	const real_t default_angular_damping = default_area != nullptr ? (real_t)default_area->get_angular_damp() : 0.0;
+
 	for (Box3DBodyImpl3D* body : bodies) {
 		if (body == nullptr || !body->has_body_id()) {
 			continue;
@@ -259,16 +279,27 @@ void Box3DSpace3D::_apply_area_overrides(const Vector3& p_default_gravity) {
 				p_default_gravity,
 				[body_position](const Box3DAreaImpl3D* p_area) { return p_area->compute_gravity(body_position); },
 				[](const Box3DAreaImpl3D* p_area) { return p_area->get_gravity_mode(); });
-		const real_t linear_damping = calculate_area_override_value<real_t>(
+		real_t linear_damping = calculate_area_override_value<real_t>(
 				overriding_areas,
-				body->get_linear_damping(),
+				default_linear_damping,
 				[](const Box3DAreaImpl3D* p_area) { return (real_t)p_area->get_linear_damp(); },
 				[](const Box3DAreaImpl3D* p_area) { return p_area->get_linear_damp_mode(); });
-		const real_t angular_damping = calculate_area_override_value<real_t>(
+		real_t angular_damping = calculate_area_override_value<real_t>(
 				overriding_areas,
-				body->get_angular_damping(),
+				default_angular_damping,
 				[](const Box3DAreaImpl3D* p_area) { return (real_t)p_area->get_angular_damp(); },
 				[](const Box3DAreaImpl3D* p_area) { return p_area->get_angular_damp_mode(); });
+
+		if (body->get_linear_damp_mode() == PhysicsServer3D::BODY_DAMP_MODE_REPLACE) {
+			linear_damping = body->get_linear_damping();
+		} else {
+			linear_damping += body->get_linear_damping();
+		}
+		if (body->get_angular_damp_mode() == PhysicsServer3D::BODY_DAMP_MODE_REPLACE) {
+			angular_damping = body->get_angular_damping();
+		} else {
+			angular_damping += body->get_angular_damping();
+		}
 
 		const real_t gravity_scale = body->get_gravity_scale();
 		const Vector3 scaled_total_gravity = unscaled_total_gravity * gravity_scale;
@@ -302,13 +333,13 @@ void Box3DSpace3D::_queue_state_sync(Box3DBodyImpl3D* p_body) {
 	}
 
 	for (const PendingStateSync& sync : pending_state_syncs) {
-		if (sync.body == p_body) {
+		if (sync.body_rid == p_body->get_rid()) {
 			return;
 		}
 	}
 
 	PendingStateSync sync;
-	sync.body = p_body;
+	sync.body_rid = p_body->get_rid();
 	pending_state_syncs.push_back(sync);
 }
 
@@ -482,17 +513,26 @@ void Box3DSpace3D::_queue_area_event(
 void Box3DSpace3D::flush_queries() {
 	flushing_queries = true;
 
-	for (const PendingStateSync& sync : pending_state_syncs) {
-		Box3DPhysicsDirectBodyState3D* state = sync.body->get_direct_state_or_null();
+	const LocalVector<PendingStateSync> state_syncs = pending_state_syncs;
+	pending_state_syncs.clear();
+	for (const PendingStateSync& sync : state_syncs) {
+		Box3DBodyImpl3D* body = Box3DPhysicsServer3D::get_singleton()->get_body(sync.body_rid);
+		if (body == nullptr || body->get_space() != this) {
+			continue;
+		}
+		const Callable callback = body->get_state_sync_callback();
+		if (!callback.is_valid()) {
+			continue;
+		}
+		Box3DPhysicsDirectBodyState3D* state = body->get_direct_state_or_null();
 		if (state == nullptr) {
 			continue;
 		}
 		Array arguments;
 		arguments.resize(1);
 		arguments[0] = state;
-		sync.body->get_state_sync_callback().callv(arguments);
+		callback.callv(arguments);
 	}
-	pending_state_syncs.clear();
 
 	for (const PendingAreaEvent& event : pending_area_events) {
 		Array arguments;

@@ -60,6 +60,11 @@ public:
 	// space, and after body type transitions that need shapes recreated).
 	void rebuild_shapes();
 
+	// Forces Box3D to destroy and recreate contacts for every shape without changing the
+	// Godot collision layer/mask. Used when custom-filter state (such as exceptions)
+	// changes while a contact already exists.
+	void refilter_shapes();
+
 	int32_t find_shape_index(b3ShapeId p_shape_id) const;
 
 protected:

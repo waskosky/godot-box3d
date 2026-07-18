@@ -19,6 +19,7 @@ struct Box3DQueryFilter3D {
 	bool collide_with_bodies = true;
 	bool collide_with_areas = false;
 	bool pick_ray = false;
+	bool body_test_motion = false;
 
 	Box3DQueryFilter3D() = default;
 

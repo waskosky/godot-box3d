@@ -79,7 +79,7 @@ public:
 
 private:
 	struct PendingStateSync {
-		Box3DBodyImpl3D* body = nullptr;
+		RID body_rid;
 	};
 
 	struct PendingAreaEvent {

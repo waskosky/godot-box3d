@@ -1,6 +1,7 @@
 #pragma once
 
 #include <godot_cpp/classes/object.hpp>
+#include <godot_cpp/godot.hpp>
 #include <godot_cpp/variant/rid.hpp>
 
 using namespace godot;
@@ -23,6 +24,13 @@ public:
 	uint64_t get_instance_id() const { return instance_id; }
 
 	void set_instance_id(uint64_t p_id) { instance_id = p_id; }
+
+	// Native result structs expect the engine's raw Object pointer, not a godot-cpp
+	// instance binding. This pointer must only be passed back to Godot, never dereferenced.
+	Object* get_instance_unsafe() const {
+		GodotObject* instance = internal::gdextension_interface_object_get_instance_from_id(instance_id);
+		return reinterpret_cast<Object*>(instance);
+	}
 
 	uint32_t get_collision_layer() const { return collision_layer; }
 

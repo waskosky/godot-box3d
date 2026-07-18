@@ -31,8 +31,11 @@ struct Box3DBodyContact3D {
 class Box3DBodyImpl3D final : public Box3DShapedObjectImpl3D {
 public:
 	using BodyMode = PhysicsServer3D::BodyMode;
+	using BodyDampMode = PhysicsServer3D::BodyDampMode;
 
 	~Box3DBodyImpl3D() override;
+
+	void set_space(Box3DSpace3D* p_space) override;
 
 	// Lazily creates (on first call) the PhysicsDirectBodyState3DExtension wrapper handed
 	// to scripts and to Godot core's move_and_slide(); reused for the object's lifetime.
@@ -62,6 +65,10 @@ public:
 
 	void set_linear_damping(real_t p_damping);
 
+	BodyDampMode get_linear_damp_mode() const { return linear_damp_mode; }
+
+	void set_linear_damp_mode(BodyDampMode p_mode) { linear_damp_mode = p_mode; }
+
 	real_t get_effective_linear_damping() const { return runtime_area_state_valid ? effective_linear_damping : linear_damping; }
 
 	real_t get_bounce() const { return bounce; }
@@ -76,6 +83,10 @@ public:
 
 	void set_angular_damping(real_t p_damping);
 
+	BodyDampMode get_angular_damp_mode() const { return angular_damp_mode; }
+
+	void set_angular_damp_mode(BodyDampMode p_mode) { angular_damp_mode = p_mode; }
+
 	real_t get_effective_angular_damping() const { return runtime_area_state_valid ? effective_angular_damping : angular_damping; }
 
 	real_t get_gravity_scale() const { return gravity_scale; }
@@ -87,6 +98,8 @@ public:
 	Vector3 get_effective_total_gravity() const { return effective_total_gravity; }
 
 	void apply_runtime_area_state(const Vector3& p_total_gravity, real_t p_linear_damping, real_t p_angular_damping);
+
+	void clear_runtime_area_state() { runtime_area_state_valid = false; }
 
 	Vector3 get_linear_velocity() const;
 
@@ -204,6 +217,8 @@ private:
 
 	real_t linear_damping = 0.0;
 	real_t angular_damping = 0.0;
+	BodyDampMode linear_damp_mode = PhysicsServer3D::BODY_DAMP_MODE_COMBINE;
+	BodyDampMode angular_damp_mode = PhysicsServer3D::BODY_DAMP_MODE_COMBINE;
 	real_t effective_linear_damping = 0.0;
 	real_t effective_angular_damping = 0.0;
 	Vector3 effective_total_gravity;

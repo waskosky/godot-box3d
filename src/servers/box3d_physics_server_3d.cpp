@@ -319,12 +319,20 @@ void Box3DPhysicsServer3D::_area_clear_shapes(const RID& p_area) {
 
 void Box3DPhysicsServer3D::_area_attach_object_instance_id(const RID& p_area, uint64_t p_id) {
 	Box3DAreaImpl3D* area = area_owner.get_or_null(p_area);
+	if (area == nullptr) {
+		Box3DSpace3D* space = space_owner.get_or_null(p_area);
+		area = space != nullptr ? space->get_default_area() : nullptr;
+	}
 	ERR_FAIL_NULL(area);
 	area->set_instance_id(p_id);
 }
 
 uint64_t Box3DPhysicsServer3D::_area_get_object_instance_id(const RID& p_area) const {
 	Box3DAreaImpl3D* area = area_owner.get_or_null(p_area);
+	if (area == nullptr) {
+		Box3DSpace3D* space = space_owner.get_or_null(p_area);
+		area = space != nullptr ? space->get_default_area() : nullptr;
+	}
 	ERR_FAIL_NULL_V(area, 0);
 	return area->get_instance_id();
 }
@@ -332,8 +340,10 @@ uint64_t Box3DPhysicsServer3D::_area_get_object_instance_id(const RID& p_area) c
 void Box3DPhysicsServer3D::_area_set_param(const RID& p_area, PhysicsServer3D::AreaParameter p_param, const Variant& p_value) {
 	Box3DAreaImpl3D* area = area_owner.get_or_null(p_area);
 	if (area == nullptr) {
-		return;
+		Box3DSpace3D* space = space_owner.get_or_null(p_area);
+		area = space != nullptr ? space->get_default_area() : nullptr;
 	}
+	ERR_FAIL_NULL(area);
 	area->set_param(p_param, p_value);
 }
 
@@ -345,6 +355,10 @@ void Box3DPhysicsServer3D::_area_set_transform(const RID& p_area, const Transfor
 
 Variant Box3DPhysicsServer3D::_area_get_param(const RID& p_area, PhysicsServer3D::AreaParameter p_param) const {
 	Box3DAreaImpl3D* area = area_owner.get_or_null(p_area);
+	if (area == nullptr) {
+		Box3DSpace3D* space = space_owner.get_or_null(p_area);
+		area = space != nullptr ? space->get_default_area() : nullptr;
+	}
 	ERR_FAIL_NULL_V(area, Variant());
 	return area->get_param(p_param);
 }
@@ -594,9 +608,10 @@ void Box3DPhysicsServer3D::_body_set_param(const RID& p_body, PhysicsServer3D::B
 			body->set_gravity_scale(p_value);
 			break;
 		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP_MODE:
+			body->set_linear_damp_mode((PhysicsServer3D::BodyDampMode)(int)p_value);
+			break;
 		case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP_MODE:
-			// Box3D always applies damping as a simple replace mode; COMBINE mode has no
-			// direct equivalent and is treated the same as REPLACE.
+			body->set_angular_damp_mode((PhysicsServer3D::BodyDampMode)(int)p_value);
 			break;
 		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP:
 			body->set_linear_damping(p_value);
@@ -626,8 +641,9 @@ Variant Box3DPhysicsServer3D::_body_get_param(const RID& p_body, PhysicsServer3D
 		case PhysicsServer3D::BODY_PARAM_GRAVITY_SCALE:
 			return body->get_gravity_scale();
 		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP_MODE:
+			return body->get_linear_damp_mode();
 		case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP_MODE:
-			return PhysicsServer3D::BODY_DAMP_MODE_COMBINE;
+			return body->get_angular_damp_mode();
 		case PhysicsServer3D::BODY_PARAM_LINEAR_DAMP:
 			return body->get_linear_damping();
 		case PhysicsServer3D::BODY_PARAM_ANGULAR_DAMP:

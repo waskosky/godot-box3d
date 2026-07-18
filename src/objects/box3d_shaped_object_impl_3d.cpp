@@ -87,10 +87,11 @@ b3ShapeId create_box3d_shape(
 
 		case PhysicsServer3D::SHAPE_CYLINDER: {
 			auto* cylinder_shape = static_cast<Box3DCylinderShapeImpl3D*>(shape);
+			const float height = (float)cylinder_shape->get_height();
 			b3HullData* cylinder = b3CreateCylinder(
-					(float)cylinder_shape->get_height(),
+					height,
 					(float)cylinder_shape->get_radius(),
-					0.0f,
+					-0.5f * height,
 					Box3DCylinderShapeImpl3D::HULL_SIDES);
 			ERR_FAIL_NULL_V(cylinder, b3_nullShapeId);
 			const b3Transform cylinder_transform = godot_to_b3_transform(local);
@@ -308,6 +309,25 @@ void Box3DShapedObjectImpl3D::rebuild_shapes() {
 		if (!instance.is_disabled()) {
 			_create_shape_instance(instance);
 		}
+	}
+}
+
+void Box3DShapedObjectImpl3D::refilter_shapes() {
+	if (!has_body_id()) {
+		return;
+	}
+	for (auto& instance : shapes) {
+		if (!instance.has_shape_id()) {
+			continue;
+		}
+		const b3ShapeId shape_id = instance.get_shape_id();
+		const b3Filter original_filter = b3Shape_GetFilter(shape_id);
+		b3Filter transient_filter = original_filter;
+		transient_filter.groupIndex = original_filter.groupIndex == 1 ? 2 : 1;
+		// b3Shape_SetFilter returns early when all bits are unchanged. A transient group
+		// change forces b3ResetProxy(), after which the original public filter is restored.
+		b3Shape_SetFilter(shape_id, transient_filter, true);
+		b3Shape_SetFilter(shape_id, original_filter, true);
 	}
 }
 

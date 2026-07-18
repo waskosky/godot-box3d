@@ -170,12 +170,12 @@ int32_t Box3DPhysicsDirectBodyState3D::_get_contact_count() const {
 
 Vector3 Box3DPhysicsDirectBodyState3D::_get_contact_local_position(int32_t p_index) const {
 	const Box3DBodyContact3D* contact = get_contact_or_null(body, p_index);
-	return contact != nullptr ? body->get_transform().affine_inverse().xform(contact->position) : Vector3();
+	return contact != nullptr ? contact->position : Vector3();
 }
 
 Vector3 Box3DPhysicsDirectBodyState3D::_get_contact_local_normal(int32_t p_index) const {
 	const Box3DBodyContact3D* contact = get_contact_or_null(body, p_index);
-	return contact != nullptr ? body->get_transform().basis.inverse().xform(contact->normal).normalized() : Vector3();
+	return contact != nullptr ? contact->normal : Vector3();
 }
 
 Vector3 Box3DPhysicsDirectBodyState3D::_get_contact_impulse(int32_t p_index) const {

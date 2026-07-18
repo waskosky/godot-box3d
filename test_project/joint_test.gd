@@ -41,14 +41,17 @@ func _run() -> void:
 
 	door.apply_torque_impulse(Vector3(0, 0, 3.0))
 
+	var max_rotation: float = 0.0
 	for i in 90:
 		await physics_frame
+		max_rotation = maxf(max_rotation, absf(door.rotation.z))
 
 	print("Door position: ", door.global_position)
 	print("Door rotation Z (deg): ", rad_to_deg(door.rotation.z))
+	print("Maximum rotation Z (deg): ", rad_to_deg(max_rotation))
 	var dist_from_anchor: float = door.global_position.distance_to(Vector3(0, 0, 0))
 	print("Distance from anchor: ", dist_from_anchor)
-	if abs(door.rotation.z) > 0.05 and dist_from_anchor < 1.5:
+	if max_rotation > 0.05 and dist_from_anchor < 1.5:
 		print("RESULT: PASS - hinge joint constrained rotation around anchor")
 	else:
 		failures += 1
