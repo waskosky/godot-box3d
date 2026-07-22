@@ -7,7 +7,8 @@ GODOT_CPP_REPOSITORY="https://github.com/godotengine/godot-cpp.git"
 GODOT_CPP_LABEL="godot-4.3-stable"
 GODOT_CPP_REF="fbbf9ec4efd8f1055d00edb8d926eef8ba4c2cce"
 
-BOX3D_REPOSITORY="https://github.com/erincatto/box3d.git"
+# This fork retains v0.1.0, which the upstream remote no longer advertises.
+BOX3D_REPOSITORY="https://github.com/waskosky/box3d.git"
 BOX3D_LABEL="v0.1.0"
 BOX3D_REF="8441b4a06d6d09dcfb0b0f704df4d847d1437b92"
 

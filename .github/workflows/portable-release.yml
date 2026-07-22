@@ -32,8 +32,8 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      - name: Install SCons
-        run: python3 -m pip install "scons==4.8.1"
+      - name: Set up pinned SCons
+        run: scripts/setup_python_build_env.sh
 
       - name: Bootstrap dependencies
         run: scripts/bootstrap_dependencies.sh
@@ -59,8 +59,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install SCons
-        run: python3 -m pip install "scons==4.8.1"
+      - name: Set up pinned SCons
+        run: scripts/setup_python_build_env.sh
 
       - name: Bootstrap dependencies
         run: scripts/bootstrap_dependencies.sh
@@ -83,8 +83,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install SCons
-        run: python3 -m pip install "scons==4.8.1"
+      - name: Set up pinned SCons
+        run: scripts/setup_python_build_env.sh
 
       - name: Bootstrap dependencies
         run: scripts/bootstrap_dependencies.sh
@@ -114,7 +114,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential git pkg-config
-          python3 -m pip install "scons==4.8.1"
+
+      - name: Set up pinned SCons
+        run: scripts/setup_python_build_env.sh
 
       - name: Install pinned Emscripten
         run: scripts/setup_web_toolchain.sh

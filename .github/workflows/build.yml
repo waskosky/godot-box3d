@@ -32,11 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install SCons
+      - name: Set up pinned SCons
         shell: bash
-        run: |
-          python3 -m pip install "scons==4.8.1"
-          scons --version
+        run: scripts/setup_python_build_env.sh
 
       - name: Bootstrap pinned dependencies
         shell: bash
@@ -45,8 +43,10 @@ jobs:
       - name: Build debug and release
         shell: bash
         run: |
-          scons -j 4 platform=${{ matrix.platform }} target=template_debug arch=${{ matrix.arch }}
-          scons -j 4 platform=${{ matrix.platform }} target=template_release arch=${{ matrix.arch }}
+          source scripts/_common.sh
+          scons_bin="$(scons_command)"
+          "$scons_bin" -j 4 platform=${{ matrix.platform }} target=template_debug arch=${{ matrix.arch }}
+          "$scons_bin" -j 4 platform=${{ matrix.platform }} target=template_release arch=${{ matrix.arch }}
 
       - name: Upload desktop binaries
         uses: actions/upload-artifact@v7
