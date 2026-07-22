@@ -288,6 +288,8 @@ def main() -> int:
             'local_env["build_profile"] = os.path.abspath("godot_cpp_build_profile.json")',
             'ARGUMENTS.get("platform") == "web"',
             'local_env["threads"] = False',
+            'box3d_env.get("is_msvc", False)',
+            'box3d_env.Prepend(CFLAGS=["/std:c17"])',
             'box3d_env.Prepend(CFLAGS=["-std=gnu17"])',
             'box3d_env.AppendUnique(CCFLAGS=["-msimd128", "-msse2"])',
             'SConscript("godot-cpp/SConstruct"',

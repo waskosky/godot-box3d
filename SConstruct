@@ -93,12 +93,10 @@ extension_env = env.Clone()
 box3d_env = env.Clone()
 box3d_env.AppendUnique(CPPPATH=common_include_dirs)
 
-# Box3D v0.1.0 is C17. Godot's own build defaults to GNU C11, so the Box3D
-# objects need an explicit override without changing godot-cpp's C++ flags.
-if getattr(box3d_env, "msvc", False):
-    # MSVC has no independent C language mode equivalent to GCC/Clang's
-    # -std=gnu17. Box3D supports the MSVC C compiler with its default mode.
-    pass
+# Box3D v0.1.0 is C17. Give only its C objects the appropriate compiler flag
+# without changing godot-cpp's C++ mode.
+if box3d_env.get("is_msvc", False):
+    box3d_env.Prepend(CFLAGS=["/std:c17"])
 else:
     box3d_env.Prepend(CFLAGS=["-std=gnu17"])
     box3d_env.AppendUnique(CCFLAGS=["-ffp-contract=off"])
