@@ -1278,8 +1278,12 @@ bool Box3DPhysicsServer3D::_soft_body_is_point_pinned(const RID& p_body, int32_t
 void Box3DPhysicsServer3D::_free_rid(const RID& p_rid) {
 	// Joints and shapes free before bodies/areas that reference them; bodies/areas free
 	// before shapes they hold (mirrors JoltPhysicsServer3DExtension::_free_rid's ordering).
-	if (Box3DJointImpl3D* joint = joint_owner.get_or_null(p_rid)) {
-		memdelete(joint);
+	if (joint_owner.owns(p_rid)) {
+		if (Box3DJointImpl3D* joint = joint_owner.get_or_null(p_rid)) {
+			memdelete(joint);
+		}
+		// _joint_clear() intentionally leaves a null placeholder behind so the same
+		// RID can be rebound. Free the owned RID even when no concrete joint remains.
 		joint_owner.free(p_rid);
 		return;
 	}

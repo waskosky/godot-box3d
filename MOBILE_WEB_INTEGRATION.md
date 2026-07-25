@@ -353,10 +353,11 @@ The supplied `.github/workflows/portable-release.yml` is the reference release p
 3. Builds iOS debug/release for arm64 on macOS.
 4. Builds Web debug/release side modules with Emscripten 4.0.20.
 5. Builds dynamic-link-enabled, no-thread Godot 4.7 Web export templates.
-6. Creates a Web-only `godot-box3d-web-release.zip` artifact as soon as the Web jobs finish.
-7. Downloads all platform artifacts into the complete packaging job.
-8. Runs strict binary validation.
-9. Creates one `godot-box3d-portable-release.zip` artifact.
+6. Exports the portable release smoke scene and runs it in headless Chromium.
+7. Creates a Web-only `godot-box3d-web-release.zip` artifact after the browser smoke passes.
+8. Downloads all platform artifacts into the complete packaging job.
+9. Runs strict binary validation.
+10. Creates one `godot-box3d-portable-release.zip` artifact.
 
 Run the workflow manually from GitHub Actions while the port is being stabilized. After device and browser acceptance, it can also be triggered for version tags.
 

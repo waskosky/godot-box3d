@@ -649,6 +649,7 @@ def main() -> int:
             "ios:",
             "web-extension:",
             "web-templates:",
+            "web-smoke:",
             "web-package:",
             "package:",
         ):

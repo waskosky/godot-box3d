@@ -100,6 +100,7 @@ For the automated browser assertion:
 ```
 
 The test passes only when the extension registers, Box3D is the requested backend, a rigid body settles on the floor, an area callback fires, and a hinge moves.
+The portable release workflow runs this release-export smoke test in headless Chromium before it packages the Web and complete portable bundles.
 
 ## Important compatibility rules
 

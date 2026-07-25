@@ -147,7 +147,7 @@ Run the desktop headless suite:
 scripts/run_headless_tests.sh
 ```
 
-Open `test_project/portable_smoke_test.tscn` as the main scene for exported Android, iOS, and Web acceptance testing. It checks backend registration, falling-body contact, an area event, and hinge movement, and displays the result on screen.
+Open `test_project/portable_smoke_test.tscn` as the main scene for exported Android, iOS, and Web acceptance testing. It checks backend registration, falling-body contact, an area event, and hinge movement, and displays the result on screen. The portable release workflow exports this scene with the release Web artifacts and runs the same assertions in headless Chromium before packaging.
 
 ## CMake
 
