@@ -133,7 +133,7 @@ jobs:
           if-no-files-found: error
 
   web-package:
-    needs: [web-extension, web-templates]
+    needs: [web-extension, web-templates, web-smoke]
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
@@ -167,8 +167,67 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  web-smoke:
+    needs: [web-extension, web-templates]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    env:
+      GODOT_VERSION: 4.7-stable
+      GODOT_ZIP_NAME: Godot_v4.7-stable_linux.x86_64
+      GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7-stable_linux.x86_64
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: portable-web-extension
+          path: bin/web
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: portable-web-templates
+          path: dist/web-export-templates
+
+      - name: Install Godot and Chromium
+        run: |
+          mkdir -p "$RUNNER_TEMP/godot"
+          curl -L --fail --retry 3 \
+            -o "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/${GODOT_ZIP_NAME}.zip"
+          unzip -o "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" -d "$RUNNER_TEMP/godot"
+          chmod +x "$GODOT_BIN"
+          python3 -m pip install --disable-pip-version-check playwright
+          python3 -m playwright install --with-deps chromium
+
+      - name: Export release smoke project
+        run: |
+          mkdir -p test_project/addons/godot-box3d/bin/web build/web-smoke-release
+          cp bin/web/*.wasm test_project/addons/godot-box3d/bin/web/
+          "$GODOT_BIN" --headless \
+            --path test_project \
+            --export-release "Web Box3D Smoke" \
+            ../build/web-smoke-release/index.html
+
+      - name: Run Chromium smoke
+        run: |
+          python3 scripts/run_web_smoke.py \
+            --dir build/web-smoke-release \
+            --screenshot build/web-smoke-release.png
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: web-smoke-result
+          path: build/web-smoke-release.png
+          if-no-files-found: warn
+          retention-days: 30
+
   package:
-    needs: [android, ios, web-extension, web-templates]
+    needs: [android, ios, web-extension, web-templates, web-smoke]
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:

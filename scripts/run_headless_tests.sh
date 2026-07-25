@@ -43,6 +43,8 @@ tests=(
     backend_activation_test.gd
     collision_filter_test.gd
     custom_integrator_test.gd
+    direct_query_test.gd
+    body_dynamics_test.gd
     review_regression_test.gd
     physics_contract_test.gd
     ray_pickability_test.gd

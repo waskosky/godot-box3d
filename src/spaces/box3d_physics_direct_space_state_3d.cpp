@@ -528,7 +528,10 @@ bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
 	if (!context.has_hit) {
 		*p_closest_safe = 1.0;
 		*p_closest_unsafe = 1.0;
-		return false;
+		// A supported cast with no collision is still a successful query. Godot's
+		// public cast_motion() contract reports this as [1.0, 1.0]; returning false
+		// from the extension hook would instead expose an empty array.
+		return true;
 	}
 
 	*p_closest_safe = context.fraction;
