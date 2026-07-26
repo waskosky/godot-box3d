@@ -174,7 +174,6 @@ jobs:
     env:
       GODOT_VERSION: 4.7-stable
       GODOT_ZIP_NAME: Godot_v4.7-stable_linux.x86_64
-      GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7-stable_linux.x86_64
     steps:
       - uses: actions/checkout@v6
 
@@ -199,7 +198,7 @@ jobs:
             -o "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" \
             "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/${GODOT_ZIP_NAME}.zip"
           unzip -o "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" -d "$RUNNER_TEMP/godot"
-          chmod +x "$GODOT_BIN"
+          chmod +x "$RUNNER_TEMP/godot/$GODOT_ZIP_NAME"
           python3 -m pip install --disable-pip-version-check playwright
           python3 -m playwright install --with-deps chromium
 
@@ -207,7 +206,7 @@ jobs:
         run: |
           mkdir -p test_project/addons/godot-box3d/bin/web build/web-smoke-release
           cp bin/web/*.wasm test_project/addons/godot-box3d/bin/web/
-          "$GODOT_BIN" --headless \
+          "$RUNNER_TEMP/godot/$GODOT_ZIP_NAME" --headless \
             --path test_project \
             --export-release "Web Box3D Smoke" \
             ../build/web-smoke-release/index.html
