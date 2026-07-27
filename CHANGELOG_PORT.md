@@ -1,5 +1,24 @@
 # Portable Port Changelog
 
+## 2026-07-26 — Character motion recovery
+
+### Fixed
+
+- `body_test_motion` recovery now measures collider geometry without Box3D's
+  20 mm speculative broad-phase padding, preventing false hover and excessive
+  depenetration for `CharacterBody3D`.
+- Simultaneous floor, wall, and corner constraints retain their complete
+  per-axis recovery instead of being weakened by contact-count averaging.
+- Safe motion clearance is now an absolute distance, so it remains stable
+  across different cast lengths and character speeds.
+
+### Validation
+
+- Added focused coverage for cast-length-independent clearance, complete
+  floor-plus-wall recovery, grounded motion, and sustained diagonal capsule
+  pressure against a wall.
+- The complete Godot 4.7 headless backend suite passes with the recovery fix.
+
 ## 2026-07-21 — Web developer onboarding
 
 ### Added

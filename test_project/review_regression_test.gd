@@ -58,8 +58,10 @@ func _run() -> void:
 	await _test_callback_detach_and_runtime_state_reset()
 	await _test_live_collision_exception_refresh()
 	await _test_motion_exclusion_lists()
+	await _test_motion_safe_clearance_is_distance_based()
 	await _test_motion_recovery_result_contract()
 	await _test_character_motion_recovery()
+	await _test_character_wall_pressure()
 
 	if failures == 0:
 		print("RESULT: PASS - review regression checks passed")
@@ -107,6 +109,15 @@ func _make_sphere_shape(radius: float) -> CollisionShape3D:
 func _make_cylinder_shape(radius: float, height: float) -> CollisionShape3D:
 	var collision := CollisionShape3D.new()
 	var shape := CylinderShape3D.new()
+	shape.radius = radius
+	shape.height = height
+	collision.shape = shape
+	return collision
+
+
+func _make_capsule_shape(radius: float, height: float) -> CollisionShape3D:
+	var collision := CollisionShape3D.new()
+	var shape := CapsuleShape3D.new()
 	shape.radius = radius
 	shape.height = height
 	collision.shape = shape
@@ -271,7 +282,9 @@ func _test_live_collision_exception_refresh() -> void:
 
 func _test_character_motion_recovery() -> void:
 	await _clear_scene()
-	_make_platform(Vector3(0, 0, 0))
+	var platform := StaticBody3D.new()
+	platform.add_child(_make_box_shape(Vector3(20, 0.5, 4)))
+	root.add_child(platform)
 	var character := CharacterBody3D.new()
 	character.position = Vector3(0, 0.74, 0)
 	character.add_child(_make_box_shape(Vector3(1, 1, 1)))
@@ -283,6 +296,43 @@ func _test_character_motion_recovery() -> void:
 		character.move_and_slide()
 		await physics_frame
 	_assert_result(character.position.x - start_x > 1.0, "grounded CharacterBody3D recovers and moves along the floor")
+	_assert_result(
+		_is_close(character.position.y, 0.7515, 0.006),
+		"CharacterBody3D recovery uses real geometry rather than the speculative broad-phase AABB (y=%.6f)"
+		% character.position.y
+	)
+
+
+func _test_character_wall_pressure() -> void:
+	await _clear_scene()
+	var floor := StaticBody3D.new()
+	floor.position = Vector3(0, -0.5, 0)
+	floor.add_child(_make_box_shape(Vector3(20, 1, 20)))
+	root.add_child(floor)
+	var wall := StaticBody3D.new()
+	wall.position = Vector3(0, 3, -3)
+	wall.add_child(_make_box_shape(Vector3(20, 6, 0.2)))
+	root.add_child(wall)
+
+	var character := CharacterBody3D.new()
+	character.position = Vector3(0, 0.9, 0)
+	character.add_child(_make_capsule_shape(0.35, 1.8))
+	root.add_child(character)
+	await physics_frame
+	var minimum_z := character.position.z
+	for i in 180:
+		character.velocity = Vector3(1.5, -0.5, -9.0)
+		character.move_and_slide()
+		minimum_z = minf(minimum_z, character.position.z)
+		await physics_frame
+	_assert_result(
+		minimum_z > -2.57,
+		"CharacterBody3D remains in front of a wall under sustained diagonal pressure"
+	)
+	_assert_result(
+		_is_close(character.position.y, 0.9, 0.02),
+		"CharacterBody3D stays grounded while sliding along the wall"
+	)
 
 
 func _test_motion_exclusion_lists() -> void:
@@ -316,6 +366,38 @@ func _test_motion_exclusion_lists() -> void:
 	_assert_result(not object_exclusion_collision and object_exclusion_result.get_travel().x > 3.9, "body_test_motion honors excluded object IDs")
 
 
+func _test_motion_safe_clearance_is_distance_based() -> void:
+	await _clear_scene()
+	var wall := StaticBody3D.new()
+	wall.position = Vector3(0, 2, 0)
+	wall.add_child(_make_box_shape(Vector3(0.5, 4, 4)))
+	root.add_child(wall)
+
+	var body := CharacterBody3D.new()
+	body.position = Vector3(-2, 0, 0)
+	body.add_child(_make_box_shape(Vector3.ONE))
+	root.add_child(body)
+	await physics_frame
+
+	var endpoints: Array[float] = []
+	for distance in [2.0, 10.0]:
+		var parameters := PhysicsTestMotionParameters3D.new()
+		parameters.from = body.global_transform
+		parameters.motion = Vector3(distance, 0, 0)
+		parameters.margin = 0.001
+		var result := PhysicsTestMotionResult3D.new()
+		var collided: bool = PhysicsServer3D.body_test_motion(
+			body.get_rid(), parameters, result
+		)
+		_assert_result(collided, "body_test_motion collides for a %.1f m cast" % distance)
+		endpoints.append((parameters.from.origin + result.get_travel()).x)
+
+	_assert_result(
+		absf(endpoints[0] - endpoints[1]) < 0.001,
+		"body_test_motion keeps a stable physical clearance for different cast lengths"
+	)
+
+
 func _test_motion_recovery_result_contract() -> void:
 	await _clear_scene()
 	_make_platform()
@@ -343,4 +425,7 @@ func _test_motion_recovery_result_contract() -> void:
 		valid_normals = valid_normals and result.get_collision_normal(i).is_normalized()
 	_assert_result(collided and result.get_collision_count() == 2, "body_test_motion reports multiple recovery collisions")
 	_assert_result(valid_normals and result.get_collision_depth() > 0.0, "recovery collisions include normalized normals and penetration depth")
-	_assert_result(result.get_travel().x > 0.0 and result.get_travel().y > 0.0, "recovery travel depenetrates the body from a corner")
+	_assert_result(
+		result.get_travel().x > 0.545 and result.get_travel().y > 0.545,
+		"recovery applies complete independent floor and wall constraints in one motion query"
+	)
