@@ -655,7 +655,25 @@ def main() -> int:
         ):
             if job_name not in workflow:
                 errors.append(f"Portable release workflow is missing job {job_name.rstrip(':')}.")
+        for cache_fragment in (
+            "uses: actions/cache@v5",
+            "id: web-template-cache",
+            "path: dist/web-export-templates",
+            "key: godot-web-templates-ubuntu-22.04-${{ hashFiles(",
+        ):
+            if cache_fragment not in workflow:
+                errors.append(
+                    "Portable release workflow is missing Web template cache fragment: "
+                    f"{cache_fragment}"
+                )
+        cache_skip = "if: steps.web-template-cache.outputs.cache-hit != 'true'"
+        if workflow.count(cache_skip) != 4:
+            errors.append(
+                "Portable release workflow must skip exactly four Web template setup/build "
+                "steps on an exact cache hit."
+            )
         checks.append("Android/iOS/Web release workflow")
+        checks.append("Exact-key Web template artifact cache")
 
     if args.require_dependencies:
         for dependency in ("box3d", "godot-cpp"):

@@ -138,6 +138,7 @@ python3 scripts/package_addon.py \
 ```
 
 The GitHub Actions workflow at `.github/workflows/portable-release.yml` automates the complete build and emits the same single release bundle.
+It reuses the generated Godot Web templates when the pinned engine, Emscripten, SCons, and template-build inputs are unchanged.
 
 ## Test project
 

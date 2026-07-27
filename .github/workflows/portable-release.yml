@@ -115,18 +115,29 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Restore Web template cache
+        id: web-template-cache
+        uses: actions/cache@v5
+        with:
+          path: dist/web-export-templates
+          key: godot-web-templates-ubuntu-22.04-${{ hashFiles('dependencies.lock', 'scripts/_common.sh', 'scripts/setup_python_build_env.sh', 'scripts/setup_web_toolchain.sh', 'scripts/build_web_templates.sh') }}
+
       - name: Install build prerequisites
+        if: steps.web-template-cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential git pkg-config
 
       - name: Set up pinned SCons
+        if: steps.web-template-cache.outputs.cache-hit != 'true'
         run: scripts/setup_python_build_env.sh
 
       - name: Install pinned Emscripten
+        if: steps.web-template-cache.outputs.cache-hit != 'true'
         run: scripts/setup_web_toolchain.sh
 
       - name: Build dynamic-link Web templates
+        if: steps.web-template-cache.outputs.cache-hit != 'true'
         env:
           JOBS: 4
         run: scripts/build_web_templates.sh
