@@ -53,9 +53,10 @@ func _process(_delta: float) -> bool:
 	frames += 1
 	if frames == 600:
 		print("Entered: ", entered, " Exited: ", exited)
-		if entered and exited:
+		var passed: bool = entered and exited
+		if passed:
 			print("RESULT: PASS - trimesh area detected the convex body entering and exiting")
 		else:
 			print("RESULT: FAIL - trimesh area did not report enter/exit for the convex body")
-		quit()
+		quit(0 if passed else 1)
 	return false

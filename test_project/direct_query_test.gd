@@ -151,13 +151,14 @@ func _test_supported_shape_queries() -> void:
 	var convex_target := _make_static_target("ConvexTarget", Vector3(-2, 0, 0), convex, 8)
 
 	var concave := ConcavePolygonShape3D.new()
+	# Godot's front-face winding is opposite Box3D's one-sided mesh winding.
 	concave.set_faces(PackedVector3Array([
 		Vector3(-1, 0, -1),
-		Vector3(1, 0, 1),
 		Vector3(1, 0, -1),
-		Vector3(-1, 0, -1),
-		Vector3(-1, 0, 1),
 		Vector3(1, 0, 1),
+		Vector3(-1, 0, -1),
+		Vector3(1, 0, 1),
+		Vector3(-1, 0, 1),
 	]))
 	var concave_target := _make_static_target("ConcaveTarget", Vector3(2, 0, 0), concave, 8)
 

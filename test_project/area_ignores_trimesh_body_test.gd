@@ -59,11 +59,12 @@ func _process(_delta: float) -> bool:
 	frames += 1
 	if frames == 60:
 		print("ConvexBody entered=", convex_entered, "  TrimeshBody entered=", trimesh_entered)
-		if convex_entered and not trimesh_entered:
+		var passed: bool = convex_entered and not trimesh_entered
+		if passed:
 			print("RESULT: PASS - area detected the convex body and ignored the trimesh body") # This is a divergence from Godot/Jolt
 		elif not convex_entered:
 			print("RESULT: FAIL - control body not detected; test is broken, not the feature")
 		else:
 			print("RESULT: FAIL - area reported the trimesh body (should be ignored)")
-		quit()
+		quit(0 if passed else 1)
 	return false

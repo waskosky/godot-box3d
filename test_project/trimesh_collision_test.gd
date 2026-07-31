@@ -39,9 +39,10 @@ func _process(_delta: float) -> bool:
 		print("Body Y after 180 physics frames: ", y)
 		print("Body linear velocity: ", body.linear_velocity)
 		# Box (half-height 0.5) resting on floor top (y = 0) settles near y = 0.5.
-		if y > 0.2 and y < 1.0:
+		var passed: bool = y > 0.2 and y < 1.0
+		if passed:
 			print("RESULT: PASS - body came to rest on the trimesh floor")
 		else:
 			print("RESULT: FAIL - body did not rest on the trimesh floor (tunneled or floated)")
-		quit()
+		quit(0 if passed else 1)
 	return false

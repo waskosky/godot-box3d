@@ -51,6 +51,9 @@ tests=(
     fall_test.gd
     settle_test.gd
     area_test.gd
+    area_ignores_trimesh_body_test.gd
+    trimesh_area_detects_body_test.gd
+    trimesh_collision_test.gd
     joint_test.gd
 )
 
