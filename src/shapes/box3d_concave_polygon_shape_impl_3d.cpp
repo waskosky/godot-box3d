@@ -55,9 +55,16 @@ void Box3DConcavePolygonShapeImpl3D::_rebuild_mesh() {
 
 	for (int i = 0; i < face_count; i++) {
 		vertices[i] = godot_to_b3(faces[i]);
-		indices[i] = i;
 		min_point = min_point.min(faces[i]);
 		max_point = max_point.max(faces[i]);
+	}
+
+	// Box3D meshes use the opposite winding order to Godot's concave shapes, so emit
+	// each triangle reversed (v0, v2, v1) to make trimesh collision register.
+	for (int t = 0; t < triangle_count; t++) {
+		indices[ t * 3 + 0] =  t * 3 + 0;
+		indices[ t * 3 + 1] =  t * 3 + 2;
+		indices[ t * 3 + 2] =  t * 3 + 1;
 	}
 
 	aabb = AABB(min_point, max_point - min_point);

@@ -36,16 +36,16 @@ b3ShapeId create_box3d_shape(
 		return b3_nullShapeId;
 	}
 
+	const PhysicsServer3D::ShapeType type = shape->get_type();
+	const bool is_concave = (type == PhysicsServer3D::SHAPE_CONCAVE_POLYGON || type == PhysicsServer3D::SHAPE_HEIGHTMAP);
+
 	b3ShapeDef def = b3DefaultShapeDef();
 	def.userData = p_user_data;
 	def.filter = box3d_godot_shape_filter(p_layer, p_mask);
 	def.isSensor = p_is_sensor;
 	def.enableCustomFiltering = true;
-	// Box3D requires *both* sides of a sensor overlap to opt into sensor events (see
-	// b3ShapeDef::enableSensorEvents doc comment: "This applies to sensors and
-	// non-sensors."), so every shape enables it, not just the sensor side, or Godot's
-	// Area3D body_entered/body_exited would never fire.
-	def.enableSensorEvents = true;
+	// A concave shape may be a sensor, but never a sensor visitor (Box3D can't proxy it).
+	def.enableSensorEvents = p_is_sensor || !is_concave;
 	def.enableContactEvents = !p_is_sensor;
 	def.enableHitEvents = !p_is_sensor;
 	def.density = 1.0f;
@@ -54,7 +54,6 @@ b3ShapeId create_box3d_shape(
 	def.baseMaterial.restitution = p_restitution;
 
 	const Transform3D& local = p_instance.get_transform();
-	const PhysicsServer3D::ShapeType type = shape->get_type();
 
 	switch (type) {
 		case PhysicsServer3D::SHAPE_SPHERE: {

@@ -14,6 +14,7 @@ func _ready() -> void:
 	_add_camera()
 	_add_light()
 	_add_ground()
+	_add_trimesh_plane()
 	_add_falling_bodies()
 	_add_monitored_area()
 	_add_hinge_door()
@@ -51,6 +52,44 @@ func _add_ground() -> void:
 	ground.add_child(mesh)
 
 	add_child(ground)
+
+
+func _add_trimesh_plane() -> void:
+	var plane_mesh: PlaneMesh = PlaneMesh.new()
+	plane_mesh.size = Vector2(6, 6)
+
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "TrimeshFloor"
+	body.position = Vector3(0, 2.5, 4)
+
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	collision.shape = plane_mesh.create_trimesh_shape()
+	body.add_child(collision)
+
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	mesh.mesh = plane_mesh
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = Color(0.85, 0.45, 0.2)
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.material_override = material
+	body.add_child(mesh)
+
+	add_child(body)
+
+	var dropper: RigidBody3D = RigidBody3D.new()
+	dropper.name = "TrimeshDropper"
+	dropper.position = Vector3(0, 8, 4)
+	var dropper_shape: CollisionShape3D = CollisionShape3D.new()
+	var dropper_box: BoxShape3D = BoxShape3D.new()
+	dropper_box.size = Vector3(0.8, 0.8, 0.8)
+	dropper_shape.shape = dropper_box
+	dropper.add_child(dropper_shape)
+	var dropper_mesh: MeshInstance3D = MeshInstance3D.new()
+	var dropper_box_mesh: BoxMesh = BoxMesh.new()
+	dropper_box_mesh.size = dropper_box.size
+	dropper_mesh.mesh = dropper_box_mesh
+	dropper.add_child(dropper_mesh)
+	add_child(dropper)
 
 
 func _add_falling_bodies() -> void:
