@@ -54,6 +54,8 @@ tests=(
     area_ignores_trimesh_body_test.gd
     trimesh_area_detects_body_test.gd
     trimesh_collision_test.gd
+    cylinder_test.gd
+    default_area_test.gd
     joint_test.gd
 )
 

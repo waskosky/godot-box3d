@@ -264,6 +264,9 @@ protected:
 private:
 	Box3DShapedObjectImpl3D* _get_shaped_object(const RID& p_rid) const;
 
+	// Godot passes a space RID to the area API to reach that space's default area.
+	RID _resolve_area_rid(const RID& p_rid) const;
+
 	static Box3DPhysicsServer3D* singleton;
 
 	RID_PtrOwner<Box3DSpace3D> space_owner;
