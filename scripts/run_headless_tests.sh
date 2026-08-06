@@ -59,7 +59,24 @@ tests=(
     joint_test.gd
 )
 
-for test_script in "${tests[@]}"; do
+run_test() {
+    local test_script="$1"
+    local test_output
+    local test_status=0
+
     printf '\n== %s ==\n' "$test_script"
-    "$godot_bin" --headless --path "$repo_root/test_project" --script "res://$test_script"
+    test_output="$("$godot_bin" --headless --path "$repo_root/test_project" --script "res://$test_script" 2>&1)" || test_status=$?
+    printf '%s\n' "$test_output"
+
+    if (( test_status != 0 )); then
+        return "$test_status"
+    fi
+    if [[ "$test_output" == *"RIDs in Godot Box3D were found to not have been freed"* ]]; then
+        printf 'ERROR: %s leaked one or more Box3D RIDs.\n' "$test_script" >&2
+        return 1
+    fi
+}
+
+for test_script in "${tests[@]}"; do
+    run_test "$test_script"
 done

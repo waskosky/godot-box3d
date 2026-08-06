@@ -1276,8 +1276,8 @@ void Box3DPhysicsServer3D::_free_rid(const RID& p_rid) {
 		if (Box3DJointImpl3D* joint = joint_owner.get_or_null(p_rid)) {
 			memdelete(joint);
 		}
-		// _joint_clear() intentionally leaves a null placeholder behind so the same
-		// RID can be rebound. Free the owned RID even when no concrete joint remains.
+		// _joint_clear() keeps a null placeholder so the RID can be rebound.
+		// Free the owned RID even when no concrete joint remains.
 		joint_owner.free(p_rid);
 		return;
 	}
