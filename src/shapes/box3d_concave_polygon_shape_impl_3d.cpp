@@ -31,15 +31,12 @@ void Box3DConcavePolygonShapeImpl3D::set_data(const Variant& p_data) {
 	_rebuild_mesh();
 }
 
-void Box3DConcavePolygonShapeImpl3D::_rebuild_mesh() {
-	if (mesh != nullptr) {
-		b3DestroyMesh(mesh);
-		mesh = nullptr;
-	}
-
-	const int face_count = faces.size();
+b3MeshData* Box3DConcavePolygonShapeImpl3D::build_mesh(
+		const PackedVector3Array& p_faces,
+		const Transform3D& p_transform) {
+	const int face_count = p_faces.size();
 	if (face_count < 3 || face_count % 3 != 0) {
-		return;
+		return nullptr;
 	}
 
 	const int triangle_count = face_count / 3;
@@ -50,24 +47,17 @@ void Box3DConcavePolygonShapeImpl3D::_rebuild_mesh() {
 	LocalVector<int32_t> indices;
 	indices.resize(face_count);
 
-	Vector3 min_point = faces[0];
-	Vector3 max_point = faces[0];
-
 	for (int i = 0; i < face_count; i++) {
-		vertices[i] = godot_to_b3(faces[i]);
-		min_point = min_point.min(faces[i]);
-		max_point = max_point.max(faces[i]);
+		vertices[i] = godot_to_b3(p_transform.xform(p_faces[i]));
 	}
 
 	// Box3D meshes use the opposite winding order to Godot's concave shapes, so emit
 	// each triangle reversed (v0, v2, v1) to make trimesh collision register.
 	for (int t = 0; t < triangle_count; t++) {
-		indices[ t * 3 + 0] =  t * 3 + 0;
-		indices[ t * 3 + 1] =  t * 3 + 2;
-		indices[ t * 3 + 2] =  t * 3 + 1;
+		indices[t * 3 + 0] = t * 3 + 0;
+		indices[t * 3 + 1] = t * 3 + 2;
+		indices[t * 3 + 2] = t * 3 + 1;
 	}
-
-	aabb = AABB(min_point, max_point - min_point);
 
 	b3MeshDef def = {};
 	def.vertices = vertices.ptr();
@@ -80,5 +70,27 @@ void Box3DConcavePolygonShapeImpl3D::_rebuild_mesh() {
 	def.useMedianSplit = false;
 	def.identifyEdges = false;
 
-	mesh = b3CreateMesh(&def, nullptr, 0);
+	return b3CreateMesh(&def, nullptr, 0);
+}
+
+void Box3DConcavePolygonShapeImpl3D::_rebuild_mesh() {
+	if (mesh != nullptr) {
+		b3DestroyMesh(mesh);
+		mesh = nullptr;
+	}
+
+	const int face_count = faces.size();
+	if (face_count < 3 || face_count % 3 != 0) {
+		return;
+	}
+
+	Vector3 min_point = faces[0];
+	Vector3 max_point = faces[0];
+	for (int i = 0; i < face_count; i++) {
+		min_point = min_point.min(faces[i]);
+		max_point = max_point.max(faces[i]);
+	}
+
+	aabb = AABB(min_point, max_point - min_point);
+	mesh = build_mesh(faces, Transform3D());
 }

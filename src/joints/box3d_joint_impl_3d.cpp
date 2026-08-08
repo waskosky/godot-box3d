@@ -28,6 +28,27 @@ void Box3DJointImpl3D::set_collision_disabled(bool p_disabled) {
 	}
 }
 
+void Box3DJointImpl3D::set_local_frame_a(const Transform3D& p_frame) {
+	// PinJoint3D rewrites its anchors on every transform notification, so skip no-op writes.
+	if (local_frame_a == p_frame) {
+		return;
+	}
+	local_frame_a = p_frame;
+	if (has_joint_id()) {
+		b3Joint_SetLocalFrameA(get_joint_id(), godot_to_b3_transform(p_frame));
+	}
+}
+
+void Box3DJointImpl3D::set_local_frame_b(const Transform3D& p_frame) {
+	if (local_frame_b == p_frame) {
+		return;
+	}
+	local_frame_b = p_frame;
+	if (has_joint_id()) {
+		b3Joint_SetLocalFrameB(get_joint_id(), godot_to_b3_transform(p_frame));
+	}
+}
+
 void Box3DJointImpl3D::rebuild() {
 	_destroy_joint_id();
 
@@ -54,7 +75,10 @@ void Box3DJointImpl3D::rebuild() {
 
 void Box3DJointImpl3D::_destroy_joint_id() {
 	if (has_joint_id()) {
-		b3DestroyJoint(joint_id, true);
+		// b3DestroyBody already destroyed this joint if either body went away first.
+		if (b3Joint_IsValid(joint_id)) {
+			b3DestroyJoint(joint_id, true);
+		}
 		joint_id = b3_nullJointId;
 	}
 }

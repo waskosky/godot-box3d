@@ -1,6 +1,5 @@
 #include "box3d_shaped_object_impl_3d.hpp"
 
-#include "../misc/box3d_collision_filter.hpp"
 #include "../misc/type_conversions.hpp"
 #include "../shapes/box3d_box_shape_impl_3d.hpp"
 #include "../shapes/box3d_capsule_shape_impl_3d.hpp"
@@ -41,13 +40,11 @@ b3ShapeId create_box3d_shape(
 
 	b3ShapeDef def = b3DefaultShapeDef();
 	def.userData = p_user_data;
-	def.filter = box3d_godot_shape_filter(p_layer, p_mask);
+	def.filter = godot_to_b3_filter(p_layer, p_mask);
 	def.isSensor = p_is_sensor;
-	def.enableCustomFiltering = true;
 	// A concave shape may be a sensor, but never a sensor visitor (Box3D can't proxy it).
 	def.enableSensorEvents = p_is_sensor || !is_concave;
 	def.enableContactEvents = !p_is_sensor;
-	def.enableHitEvents = !p_is_sensor;
 	def.density = 1.0f;
 	def.baseMaterial = b3DefaultSurfaceMaterial();
 	def.baseMaterial.friction = p_friction;
@@ -116,12 +113,24 @@ b3ShapeId create_box3d_shape(
 
 		case PhysicsServer3D::SHAPE_CONCAVE_POLYGON: {
 			auto* mesh_shape = static_cast<Box3DConcavePolygonShapeImpl3D*>(shape);
-			const b3MeshData* mesh = mesh_shape->get_mesh();
-			if (mesh == nullptr) {
+			def.invokeContactCreation = true;
+
+			// b3CreateMeshShape takes no transform, so an offset or rotated instance needs
+			// its own mesh with the local transform baked into the vertices.
+			if (local.origin == Vector3() && local.basis.is_equal_approx(Basis())) {
+				const b3MeshData* mesh = mesh_shape->get_mesh();
+				if (mesh == nullptr) {
+					return b3_nullShapeId;
+				}
+				return b3CreateMeshShape(p_body_id, &def, mesh, b3Vec3{1.0f, 1.0f, 1.0f});
+			}
+
+			b3MeshData* baked = Box3DConcavePolygonShapeImpl3D::build_mesh(mesh_shape->get_faces(), local);
+			if (baked == nullptr) {
 				return b3_nullShapeId;
 			}
-			def.invokeContactCreation = true;
-			return b3CreateMeshShape(p_body_id, &def, mesh, b3Vec3{1.0f, 1.0f, 1.0f});
+			p_instance.set_owned_mesh(baked);
+			return b3CreateMeshShape(p_body_id, &def, baked, b3Vec3{1.0f, 1.0f, 1.0f});
 		}
 
 		case PhysicsServer3D::SHAPE_HEIGHTMAP: {
@@ -188,16 +197,6 @@ void Box3DShapedObjectImpl3D::set_transform(const Transform3D& p_transform) {
 	}
 }
 
-void Box3DShapedObjectImpl3D::set_collision_layer(uint32_t p_layer) {
-	Box3DObjectImpl3D::set_collision_layer(p_layer);
-	_sync_shape_filters();
-}
-
-void Box3DShapedObjectImpl3D::set_collision_mask(uint32_t p_mask) {
-	Box3DObjectImpl3D::set_collision_mask(p_mask);
-	_sync_shape_filters();
-}
-
 void Box3DShapedObjectImpl3D::add_shape(Box3DShapeImpl3D* p_shape, const Transform3D& p_transform, bool p_disabled) {
 	Box3DShapeInstance3D instance(p_shape, p_transform);
 	instance.set_disabled(p_disabled);
@@ -254,6 +253,16 @@ Box3DShapeImpl3D* Box3DShapedObjectImpl3D::get_shape(int32_t p_index) const {
 Transform3D Box3DShapedObjectImpl3D::get_shape_transform(int32_t p_index) const {
 	ERR_FAIL_INDEX_V(p_index, (int32_t)shapes.size(), Transform3D());
 	return shapes[p_index].get_transform();
+}
+
+b3ShapeId Box3DShapedObjectImpl3D::get_shape_id(int32_t p_index) const {
+	ERR_FAIL_INDEX_V(p_index, (int32_t)shapes.size(), b3_nullShapeId);
+	return shapes[p_index].get_shape_id();
+}
+
+bool Box3DShapedObjectImpl3D::has_shape_id(int32_t p_index) const {
+	ERR_FAIL_INDEX_V(p_index, (int32_t)shapes.size(), false);
+	return shapes[p_index].has_shape_id();
 }
 
 void Box3DShapedObjectImpl3D::set_shape_transform(int32_t p_index, const Transform3D& p_transform) {
@@ -320,39 +329,6 @@ void Box3DShapedObjectImpl3D::rebuild_shapes() {
 	_shapes_changed();
 }
 
-void Box3DShapedObjectImpl3D::refilter_shapes() {
-	if (!has_body_id()) {
-		return;
-	}
-	for (auto& instance : shapes) {
-		if (!instance.has_shape_id()) {
-			continue;
-		}
-		const b3ShapeId shape_id = instance.get_shape_id();
-		const b3Filter original_filter = b3Shape_GetFilter(shape_id);
-		b3Filter transient_filter = original_filter;
-		transient_filter.groupIndex = original_filter.groupIndex == 1 ? 2 : 1;
-		// b3Shape_SetFilter returns early when all bits are unchanged. A transient group
-		// change forces b3ResetProxy(), after which the original public filter is restored.
-		b3Shape_SetFilter(shape_id, transient_filter, true);
-		b3Shape_SetFilter(shape_id, original_filter, true);
-	}
-}
-
-int32_t Box3DShapedObjectImpl3D::find_shape_index(b3ShapeId p_shape_id) const {
-	if (B3_IS_NULL(p_shape_id)) {
-		return -1;
-	}
-	for (int32_t i = 0; i < (int32_t)shapes.size(); i++) {
-		if (shapes[i].get_shape_id().index1 == p_shape_id.index1 &&
-				shapes[i].get_shape_id().world0 == p_shape_id.world0 &&
-				shapes[i].get_shape_id().generation == p_shape_id.generation) {
-			return i;
-		}
-	}
-	return -1;
-}
-
 void Box3DShapedObjectImpl3D::_destroy_body_id() {
 	if (has_body_id()) {
 		for (auto& instance : shapes) {
@@ -360,18 +336,6 @@ void Box3DShapedObjectImpl3D::_destroy_body_id() {
 		}
 		b3DestroyBody(body_id);
 		body_id = b3_nullBodyId;
-	}
-}
-
-void Box3DShapedObjectImpl3D::_sync_shape_filters() {
-	if (!has_body_id()) {
-		return;
-	}
-	const b3Filter filter = box3d_godot_shape_filter(collision_layer, collision_mask);
-	for (auto& instance : shapes) {
-		if (instance.has_shape_id()) {
-			b3Shape_SetFilter(instance.get_shape_id(), filter, true);
-		}
 	}
 }
 
@@ -387,5 +351,10 @@ void Box3DShapedObjectImpl3D::_destroy_shape_instance(Box3DShapeInstance3D& p_in
 	if (p_instance.has_shape_id()) {
 		b3DestroyShape(p_instance.get_shape_id(), true);
 		p_instance.set_shape_id(b3_nullShapeId);
+	}
+	// Box3D keeps a pointer to mesh data, so free the baked copy only after the shape.
+	if (p_instance.get_owned_mesh() != nullptr) {
+		b3DestroyMesh(p_instance.get_owned_mesh());
+		p_instance.set_owned_mesh(nullptr);
 	}
 }

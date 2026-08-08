@@ -1,0 +1,98 @@
+[gd_scene format=3 uid="uid://itg6rmnmk87l"]
+
+[ext_resource type="PackedScene" uid="uid://itg6r3r77evs" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" uid="uid://git6imifhq17" path="res://demos/contacts.gd" id="4_script"]
+[ext_resource type="PackedScene" uid="uid://itg6ru785lvs" path="res://common/demo_label.tscn" id="9_label"]
+
+[sub_resource type="BoxShape3D" id="DropShape"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="DropMat"]
+albedo_color = Color(0.9, 0.35, 0.35, 1)
+
+[sub_resource type="BoxMesh" id="DropMesh"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="MarkerMat"]
+albedo_color = Color(1, 0.9, 0.3, 1)
+emission_enabled = true
+emission = Color(1, 0.85, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="MarkerMesh"]
+radius = 0.12
+height = 0.24
+
+[node name="Contacts" type="Node3D" unique_id=1567992215 node_paths=PackedStringArray("reporter", "markers", "hud")]
+script = ExtResource("4_script")
+reporter = NodePath("Reporter")
+markers = NodePath("Markers")
+description = "The dropped box reports real contact points, normals, and impulses. Yellow markers sit on each reported contact point; press Space to drop it again."
+hud = NodePath("DemoHud")
+
+[node name="Stage" parent="." unique_id=1088763719 instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." unique_id=667315796 instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 1.5, 0)
+distance = 10.0
+
+[node name="DemoHud" parent="." unique_id=1208328574 instance=ExtResource("3_hud")]
+
+[node name="Reporter" type="RigidBody3D" parent="." unique_id=921338335]
+transform = Transform3D(0.9658856, 0.25896928, 0, -0.25896928, 0.9658856, 0, 0, 0, 1, 0, 6, 0)
+contact_monitor = true
+max_contacts_reported = 8
+
+[node name="Collision" type="CollisionShape3D" parent="Reporter" unique_id=2107545020]
+shape = SubResource("DropShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Reporter" unique_id=1139749983]
+material_override = SubResource("DropMat")
+mesh = SubResource("DropMesh")
+
+[node name="Label" parent="Reporter" unique_id=46195686 instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+text = "contact_monitor"
+
+[node name="Markers" type="Node3D" parent="." unique_id=2122736781]
+
+[node name="Marker0" type="MeshInstance3D" parent="Markers" unique_id=1463929368]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")
+
+[node name="Marker1" type="MeshInstance3D" parent="Markers" unique_id=2047657199]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")
+
+[node name="Marker2" type="MeshInstance3D" parent="Markers" unique_id=213845836]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")
+
+[node name="Marker3" type="MeshInstance3D" parent="Markers" unique_id=306742984]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")
+
+[node name="Marker4" type="MeshInstance3D" parent="Markers" unique_id=2130923825]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")
+
+[node name="Marker5" type="MeshInstance3D" parent="Markers" unique_id=688179019]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")
+
+[node name="Marker6" type="MeshInstance3D" parent="Markers" unique_id=1507161146]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")
+
+[node name="Marker7" type="MeshInstance3D" parent="Markers" unique_id=1255219680]
+visible = false
+material_override = SubResource("MarkerMat")
+mesh = SubResource("MarkerMesh")

@@ -1,0 +1,120 @@
+[gd_scene format=3 uid="uid://itg6r4qhpfvs"]
+
+[ext_resource type="PackedScene" uid="uid://itg6r3r77evs" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" uid="uid://bk0mhkwm1tqw8" path="res://demos/trimesh_transform.gd" id="4_script"]
+[ext_resource type="PackedScene" uid="uid://itg6ru785lvs" path="res://common/demo_label.tscn" id="5_label"]
+
+[sub_resource type="ConcavePolygonShape3D" id="PadShape"]
+data = PackedVector3Array(1.5, 0, 1.5, -1.5, 0, 1.5, 1.5, 0, -1.5, -1.5, 0, 1.5, -1.5, 0, -1.5, 1.5, 0, -1.5)
+
+[sub_resource type="StandardMaterial3D" id="PadMat"]
+cull_mode = 2
+albedo_color = Color(0.85, 0.5, 0.25, 1)
+
+[sub_resource type="PlaneMesh" id="PadMesh"]
+size = Vector2(3, 3)
+
+[sub_resource type="SphereShape3D" id="BallShape"]
+radius = 0.35
+
+[sub_resource type="StandardMaterial3D" id="BallMat"]
+albedo_color = Color(0.55, 0.8, 0.95, 1)
+
+[sub_resource type="SphereMesh" id="BallMesh"]
+radius = 0.35
+height = 0.7
+
+[node name="Trimesh transform" type="Node3D" unique_id=694624361 node_paths=PackedStringArray("balls", "hud")]
+script = ExtResource("4_script")
+balls = NodePath("Balls")
+description = "Three trimesh pads with different transforms: plain, offset inside its body, and scaled by its parent.
+Each ball should rest on its own pad. "
+hud = NodePath("DemoHud")
+
+[node name="Stage" parent="." unique_id=87303740 instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." unique_id=43897059 instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 3, 0)
+distance = 20.0
+
+[node name="DemoHud" parent="." unique_id=1967516298 instance=ExtResource("3_hud")]
+
+[node name="PlainPad" type="StaticBody3D" parent="." unique_id=1926129981]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="PlainPad" unique_id=428999876]
+shape = SubResource("PadShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="PlainPad" unique_id=1024097382]
+material_override = SubResource("PadMat")
+mesh = SubResource("PadMesh")
+
+[node name="Label" parent="PlainPad" unique_id=177040307 instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+text = "plain (no local transform)"
+
+[node name="OffsetPad" type="StaticBody3D" parent="." unique_id=885858460]
+
+[node name="Collision" type="CollisionShape3D" parent="OffsetPad" unique_id=622410533]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+shape = SubResource("PadShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="OffsetPad" unique_id=1847365884]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+material_override = SubResource("PadMat")
+mesh = SubResource("PadMesh")
+
+[node name="Label" parent="OffsetPad" unique_id=2115102622 instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+text = "shape offset +2 inside body"
+
+[node name="ScaledHolder" type="Node3D" parent="." unique_id=1026898742]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 5, 0, 0)
+
+[node name="ScaledPad" type="StaticBody3D" parent="ScaledHolder" unique_id=474403530]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="ScaledHolder/ScaledPad" unique_id=1714882752]
+shape = SubResource("PadShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="ScaledHolder/ScaledPad" unique_id=356673404]
+material_override = SubResource("PadMat")
+mesh = SubResource("PadMesh")
+
+[node name="Label" parent="ScaledHolder/ScaledPad" unique_id=450971784 instance=ExtResource("5_label")]
+transform = Transform3D(0.625, 0, 0, 0, 0.625, 0, 0, 0, 0.625, 0, 0.9, 0)
+text = "parent scaled 1.6x"
+
+[node name="Balls" type="Node3D" parent="." unique_id=1522956594]
+
+[node name="PlainBall" type="RigidBody3D" parent="Balls" unique_id=1207674347]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 8, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="Balls/PlainBall" unique_id=2086763314]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Balls/PlainBall" unique_id=2130459859]
+material_override = SubResource("BallMat")
+mesh = SubResource("BallMesh")
+
+[node name="OffsetBall" type="RigidBody3D" parent="Balls" unique_id=1721415273]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="Balls/OffsetBall" unique_id=619181920]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Balls/OffsetBall" unique_id=464344309]
+material_override = SubResource("BallMat")
+mesh = SubResource("BallMesh")
+
+[node name="ScaledBall" type="RigidBody3D" parent="Balls" unique_id=922867910]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 8, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="Balls/ScaledBall" unique_id=130298057]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Balls/ScaledBall" unique_id=812848815]
+material_override = SubResource("BallMat")
+mesh = SubResource("BallMesh")

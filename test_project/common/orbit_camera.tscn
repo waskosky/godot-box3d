@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://i5tul4a8e0vs"]
+
+[ext_resource type="Script" path="res://common/orbit_camera.gd" id="1_orbit"]
+
+[node name="OrbitCamera" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 0, 0)
+script = ExtResource("1_orbit")
+
+[node name="Camera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)

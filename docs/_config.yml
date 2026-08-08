@@ -1,0 +1,36 @@
+title: godot-box3d
+description: Box3D physics for Godot 4, as a drop-in PhysicsServer3D extension
+version: 0.2.0-dev
+
+# Styling follows box2d.org/documentation3d, so the two sets of docs feel related.
+# No remote theme: the layout in _layouts/default.html is self-contained.
+
+repository: bearlikelion/godot-box3d
+github_url: https://github.com/bearlikelion/godot-box3d
+
+# Pages become directories, so nav URLs and in-page links are both extensionless.
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      permalink: /:basename/
+
+nav:
+  - title: Overview
+    url: /
+  - title: Installation
+    url: /installation/
+  - title: Demos
+    url: /demos/
+  - title: Behavior differences
+    url: /behavior-differences/
+  - title: Comparison
+    url: /comparison/
+  - title: Building
+    url: /building/
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor

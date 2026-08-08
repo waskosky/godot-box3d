@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://itg6ru785lvs"]
+
+[node name="DemoLabel" type="Label3D"]
+pixel_size = 0.008
+billboard = 1
+no_depth_test = true
+outline_modulate = Color(0.16, 0.16, 0.18, 1)
+text = "Label"
+font_size = 48
+outline_size = 20

@@ -210,7 +210,7 @@ public:
 	void _joint_disable_collisions_between_bodies(const RID& p_joint, bool p_disable) override;
 	bool _joint_is_disabled_collisions_between_bodies(const RID& p_joint) const override;
 
-	// --- Soft bodies (explicitly unsupported: warn and return inert defaults) ---
+	// --- Soft bodies (non-goal: return invalid RID / no-op) ---
 	RID _soft_body_create() override;
 	void _soft_body_update_rendering_server(const RID& p_body, PhysicsServer3DRenderingServerHandler* p_rendering_server_handler) override;
 	void _soft_body_set_space(const RID& p_body, const RID& p_space) override;
@@ -267,6 +267,9 @@ private:
 	// Godot passes a space RID to the area API to reach that space's default area.
 	RID _resolve_area_rid(const RID& p_rid) const;
 
+	// Destroys every collision exception referencing a body, both directions.
+	void _clear_collision_exceptions(Box3DBodyImpl3D* p_body);
+
 	static Box3DPhysicsServer3D* singleton;
 
 	RID_PtrOwner<Box3DSpace3D> space_owner;
@@ -276,5 +279,7 @@ private:
 	RID_PtrOwner<Box3DJointImpl3D> joint_owner;
 
 	HashSet<Box3DSpace3D*> active_spaces;
+	// Narrows the reverse lookup when freeing a body, since exceptions are stored one-sided.
+	HashSet<Box3DBodyImpl3D*> bodies_with_exceptions;
 	bool active = true;
 };

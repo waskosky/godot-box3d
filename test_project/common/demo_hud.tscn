@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://b3ddemohud001"]
+
+[ext_resource type="Theme" uid="uid://itg6r4gdeevs" path="res://common/demo_theme.tres" id="1_theme"]
+[ext_resource type="Script" uid="uid://lp33njfcue54" path="res://common/demo_hud.gd" id="2_hud"]
+
+[node name="DemoHud" type="CanvasLayer" unique_id=1524399744]
+script = ExtResource("2_hud")
+
+[node name="Root" type="MarginContainer" parent="." unique_id=1205252669]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource("1_theme")
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+mouse_filter = 2
+
+[node name="Rows" type="VBoxContainer" parent="Root" unique_id=721262417]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TopRow" type="HBoxContainer" parent="Root/Rows" unique_id=786815490]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Info" type="VBoxContainer" parent="Root/Rows/TopRow" unique_id=1038118979]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Rows/TopRow/Info" unique_id=2119822381]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"DemoTitle"
+text = "Demo"
+mouse_filter = 2
+
+[node name="DescriptionLabel" type="Label" parent="Root/Rows/TopRow/Info" unique_id=1115783541]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+autowrap_mode = 2
+mouse_filter = 2
+
+[node name="StatusLabel" type="Label" parent="Root/Rows/TopRow/Info" unique_id=2023220132]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"DemoStatus"
+mouse_filter = 2
+
+[node name="BackendLabel" type="Label" parent="Root/Rows/TopRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+mouse_filter = 2
+
+[node name="Spacer" type="Control" parent="Root/Rows" unique_id=511185821]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Controls" type="HBoxContainer" parent="Root/Rows" unique_id=1238924951]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+mouse_filter = 2
+
+[node name="BackButton" type="Button" parent="Root/Rows/Controls" unique_id=170783632]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Back"
+
+[node name="RestartButton" type="Button" parent="Root/Rows/Controls" unique_id=1299751734]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Restart"
+
+[node name="HintLabel" type="Label" parent="Root/Rows/Controls" unique_id=874267344]
+layout_mode = 2
+theme_type_variation = &"DemoStatus"
+text = "   Right-drag orbit  |  Wheel zoom"
+mouse_filter = 2

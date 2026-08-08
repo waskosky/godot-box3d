@@ -1,0 +1,138 @@
+[gd_scene format=3 uid="uid://itg6r3f8heos"]
+
+[ext_resource type="PackedScene" uid="uid://itg6r3r77evs" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" uid="uid://brsiorim1y6n3" path="res://common/demo_base.gd" id="4_base"]
+[ext_resource type="PackedScene" uid="uid://itg6ru785lvs" path="res://common/demo_label.tscn" id="5_label"]
+
+[sub_resource type="BoxShape3D" id="BoxShape_1"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="Mat_1"]
+albedo_color = Color(0.85, 0.4, 0.35, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="SphereShape3D" id="SphereShape_1"]
+radius = 0.7
+
+[sub_resource type="StandardMaterial3D" id="Mat_2"]
+albedo_color = Color(0.4, 0.65, 0.85, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.7
+height = 1.4
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_1"]
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_3"]
+albedo_color = Color(0.5, 0.8, 0.45, 1)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
+height = 1.8
+
+[sub_resource type="CylinderShape3D" id="CylShape_1"]
+height = 1.6
+radius = 0.65
+
+[sub_resource type="StandardMaterial3D" id="Mat_4"]
+albedo_color = Color(0.85, 0.7, 0.3, 1)
+
+[sub_resource type="CylinderMesh" id="CylMesh_1"]
+top_radius = 0.65
+bottom_radius = 0.65
+height = 1.6
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexShape_1"]
+points = PackedVector3Array(-0.7, -0.7, -0.7, 0.7, -0.7, -0.7, -0.7, -0.7, 0.7, 0.7, -0.7, 0.7, 0, 0.7, 0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_5"]
+albedo_color = Color(0.7, 0.5, 0.85, 1)
+
+[sub_resource type="PrismMesh" id="PrismMesh_1"]
+size = Vector3(1.4, 1.4, 1.4)
+
+[node name="Shapes" type="Node3D" unique_id=381871224 node_paths=PackedStringArray("hud")]
+script = ExtResource("4_base")
+description = "Every shape Box3D supports, dropped: box, sphere, capsule, cylinder, and convex hull."
+hud = NodePath("DemoHud")
+
+[node name="Stage" parent="." unique_id=658845829 instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." unique_id=245969261 instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 2, 0)
+
+[node name="DemoHud" parent="." unique_id=1536249066 instance=ExtResource("3_hud")]
+
+[node name="BoxBody" type="RigidBody3D" parent="." unique_id=1558195880]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 6, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="BoxBody" unique_id=810485830]
+shape = SubResource("BoxShape_1")
+
+[node name="Mesh" type="MeshInstance3D" parent="BoxBody" unique_id=1198843051]
+material_override = SubResource("Mat_1")
+mesh = SubResource("BoxMesh_1")
+
+[node name="Label" parent="BoxBody" unique_id=585792669 instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "BoxShape3D"
+
+[node name="SphereBody" type="RigidBody3D" parent="." unique_id=854735771]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 7, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="SphereBody" unique_id=1573878545]
+shape = SubResource("SphereShape_1")
+
+[node name="Mesh" type="MeshInstance3D" parent="SphereBody" unique_id=1199193804]
+material_override = SubResource("Mat_2")
+mesh = SubResource("SphereMesh_1")
+
+[node name="Label" parent="SphereBody" unique_id=407367306 instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "SphereShape3D"
+
+[node name="CapsuleBody" type="RigidBody3D" parent="." unique_id=253091102]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="CapsuleBody" unique_id=1926049665]
+shape = SubResource("CapsuleShape_1")
+
+[node name="Mesh" type="MeshInstance3D" parent="CapsuleBody" unique_id=1151202283]
+material_override = SubResource("Mat_3")
+mesh = SubResource("CapsuleMesh_1")
+
+[node name="Label" parent="CapsuleBody" unique_id=770763804 instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "CapsuleShape3D"
+
+[node name="CylinderBody" type="RigidBody3D" parent="." unique_id=38527393]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 7, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="CylinderBody" unique_id=147977525]
+shape = SubResource("CylShape_1")
+
+[node name="Mesh" type="MeshInstance3D" parent="CylinderBody" unique_id=770193682]
+material_override = SubResource("Mat_4")
+mesh = SubResource("CylMesh_1")
+
+[node name="Label" parent="CylinderBody" unique_id=1286754409 instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "CylinderShape3D"
+
+[node name="ConvexBody" type="RigidBody3D" parent="." unique_id=710196322]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="ConvexBody" unique_id=885204828]
+shape = SubResource("ConvexShape_1")
+
+[node name="Mesh" type="MeshInstance3D" parent="ConvexBody" unique_id=1627302168]
+material_override = SubResource("Mat_5")
+mesh = SubResource("PrismMesh_1")
+
+[node name="Label" parent="ConvexBody" unique_id=150261151 instance=ExtResource("5_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+text = "ConvexPolygonShape3D"

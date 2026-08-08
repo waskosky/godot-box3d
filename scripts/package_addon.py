@@ -17,29 +17,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ADDON_ROOT = Path("addons/godot-box3d")
 
 PLATFORM_BINARIES: dict[str, tuple[str, ...]] = {
-    "android": (
-        "bin/android/libgodot-box3d.android.template_debug.arm64.so",
-        "bin/android/libgodot-box3d.android.template_release.arm64.so",
-        "bin/android/libgodot-box3d.android.template_debug.x86_64.so",
-        "bin/android/libgodot-box3d.android.template_release.x86_64.so",
-    ),
-    "ios": (
-        "bin/ios/libgodot-box3d.ios.template_debug.xcframework",
-        "bin/ios/libgodot-box3d.ios.template_release.xcframework",
-    ),
     "web": (
         "bin/web/libgodot-box3d.web.template_debug.wasm32.nothreads.wasm",
         "bin/web/libgodot-box3d.web.template_release.wasm32.nothreads.wasm",
-    ),
-    "desktop": (
-        "bin/macos/libgodot-box3d.macos.template_debug.dylib",
-        "bin/macos/libgodot-box3d.macos.template_release.dylib",
-        "bin/windows/godot-box3d.windows.template_debug.x86_64.dll",
-        "bin/windows/godot-box3d.windows.template_release.x86_64.dll",
-        "bin/linux/libgodot-box3d.linux.template_debug.x86_64.so",
-        "bin/linux/libgodot-box3d.linux.template_release.x86_64.so",
-        "bin/linux/libgodot-box3d.linux.template_debug.arm64.so",
-        "bin/linux/libgodot-box3d.linux.template_release.arm64.so",
     ),
 }
 
@@ -55,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=REPO_ROOT / "dist/godot-box3d-portable-release.zip",
+        default=REPO_ROOT / "dist/godot-box3d-web-release.zip",
         help="Destination ZIP path.",
     )
     parser.add_argument(
@@ -68,7 +48,7 @@ def parse_args() -> argparse.Namespace:
         "--platform",
         action="append",
         choices=sorted(PLATFORM_BINARIES),
-        help="Platform group to include. Defaults to android, ios, and web. May be repeated.",
+        help="Platform group to include. Defaults to web.",
     )
     parser.add_argument(
         "--web-templates-dir",
@@ -131,16 +111,16 @@ def zip_tree(root: Path, output: Path) -> None:
 
 def main() -> int:
     args = parse_args()
-    selected = args.platform or ["android", "ios", "web"]
+    selected = args.platform or ["web"]
     missing: list[str] = []
 
     with tempfile.TemporaryDirectory(prefix="godot-box3d-package-") as temp_dir:
-        staging = Path(temp_dir) / ("godot-box3d-portable" if args.mode == "bundle" else "package")
+        staging = Path(temp_dir) / ("godot-box3d-web" if args.mode == "bundle" else "package")
         addon = staging / ADDON_ROOT if args.mode == "bundle" else staging / ADDON_ROOT
         addon.mkdir(parents=True, exist_ok=True)
 
         copy_required(
-            REPO_ROOT / "godot-box3d.gdextension",
+            REPO_ROOT / "test_project/addons/godot-box3d/godot-box3d.gdextension",
             addon / "godot-box3d.gdextension",
             allow_missing=False,
             missing=missing,
@@ -183,11 +163,6 @@ def main() -> int:
         if args.mode == "bundle":
             for filename in (
                 "WEB_QUICKSTART.md",
-                "MOBILE_WEB_INTEGRATION.md",
-                "PORT_STATUS.md",
-                "VALIDATION_REPORT.md",
-                "CHANGELOG_PORT.md",
-                "THIRD_PARTY_NOTICES.md",
                 "README.md",
                 "dependencies.lock",
             ):
@@ -226,7 +201,7 @@ def main() -> int:
                 lock_values[key] = value.strip().strip('"')
 
         manifest = {
-            "package": "godot-box3d portable release",
+            "package": "godot-box3d Web release",
             "mode": args.mode,
             "platform_groups": selected,
             "complete": not missing,
@@ -238,9 +213,6 @@ def main() -> int:
                 "emsdk_ref": lock_values.get("EMSDK_REF"),
                 "emscripten_version": lock_values.get("EMSCRIPTEN_VERSION"),
                 "scons_version": lock_values.get("SCONS_VERSION"),
-                "android_ndk_version": lock_values.get("ANDROID_NDK_VERSION"),
-                "android_api_level": lock_values.get("ANDROID_API_LEVEL"),
-                "ios_min_version": lock_values.get("IOS_MIN_VERSION"),
             },
             "binaries": included_binaries,
             "web_export_templates": web_templates,

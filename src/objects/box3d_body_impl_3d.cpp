@@ -12,11 +12,6 @@ Box3DBodyImpl3D::~Box3DBodyImpl3D() {
 	}
 }
 
-void Box3DBodyImpl3D::set_space(Box3DSpace3D* p_space) {
-	clear_runtime_area_state();
-	Box3DShapedObjectImpl3D::set_space(p_space);
-}
-
 Box3DPhysicsDirectBodyState3D* Box3DBodyImpl3D::get_direct_state_or_null() {
 	if (direct_state == nullptr) {
 		direct_state = memnew(Box3DPhysicsDirectBodyState3D);
@@ -102,7 +97,7 @@ void Box3DBodyImpl3D::set_inertia(const Vector3& p_inertia) {
 
 Vector3 Box3DBodyImpl3D::get_center_of_mass() const {
 	if (has_body_id()) {
-		return b3_to_godot(b3Body_GetLocalCenterOfMass(body_id));
+		return b3_to_godot(b3Body_GetLocalCenter(body_id));
 	}
 	return center_of_mass_custom;
 }
@@ -164,18 +159,6 @@ void Box3DBodyImpl3D::set_angular_damping(real_t p_damping) {
 	}
 }
 
-void Box3DBodyImpl3D::apply_runtime_area_state(const Vector3& p_total_gravity, real_t p_linear_damping, real_t p_angular_damping) {
-	effective_total_gravity = p_total_gravity;
-	effective_linear_damping = p_linear_damping;
-	effective_angular_damping = p_angular_damping;
-	runtime_area_state_valid = true;
-
-	if (has_body_id()) {
-		b3Body_SetLinearDamping(body_id, omit_force_integration ? 0.0f : (float)p_linear_damping);
-		b3Body_SetAngularDamping(body_id, omit_force_integration ? 0.0f : (float)p_angular_damping);
-	}
-}
-
 void Box3DBodyImpl3D::set_gravity_scale(real_t p_scale) {
 	gravity_scale = p_scale;
 	if (has_body_id()) {
@@ -196,8 +179,8 @@ void Box3DBodyImpl3D::_sync_force_integration_settings() {
 		return;
 	}
 	b3Body_SetGravityScale(body_id, omit_force_integration ? 0.0f : (float)gravity_scale);
-	b3Body_SetLinearDamping(body_id, omit_force_integration ? 0.0f : (float)get_effective_linear_damping());
-	b3Body_SetAngularDamping(body_id, omit_force_integration ? 0.0f : (float)get_effective_angular_damping());
+	b3Body_SetLinearDamping(body_id, omit_force_integration ? 0.0f : (float)linear_damping);
+	b3Body_SetAngularDamping(body_id, omit_force_integration ? 0.0f : (float)angular_damping);
 }
 
 Vector3 Box3DBodyImpl3D::get_linear_velocity() const {
@@ -392,6 +375,74 @@ void Box3DBodyImpl3D::set_constant_torque(const Vector3& p_torque) {
 	constant_torque = p_torque;
 }
 
+void Box3DBodyImpl3D::refresh_contacts() {
+	contacts.clear();
+	// Godot has no separate contact-monitor enable call; max_contacts_reported is the signal.
+	if (max_contacts_reported <= 0 || !has_body_id()) {
+		return;
+	}
+
+	// max_contacts_reported counts points, not pairs, so fetch every pair and truncate below.
+	const int pair_capacity = b3Body_GetContactCapacity(body_id);
+	if (pair_capacity <= 0) {
+		return;
+	}
+
+	contact_pairs.resize(pair_capacity);
+	const int pair_count = b3Body_GetContactData(body_id, contact_pairs.ptr(), pair_capacity);
+
+	const b3Vec3 self_center = b3Body_GetWorldCenter(body_id);
+
+	for (int i = 0; i < pair_count && (int32_t)contacts.size() < max_contacts_reported; i++) {
+		const b3ContactData& pair = contact_pairs[i];
+		if (!b3Shape_IsValid(pair.shapeIdA) || !b3Shape_IsValid(pair.shapeIdB)) {
+			continue;
+		}
+
+		const b3BodyId body_a = b3Shape_GetBody(pair.shapeIdA);
+		const b3BodyId body_b = b3Shape_GetBody(pair.shapeIdB);
+		auto* object_a = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(body_a));
+		const bool self_is_a = object_a == this;
+		const b3BodyId other_id = self_is_a ? body_b : body_a;
+
+		// Areas share the userData slot as a sibling class, so a static_cast would yield garbage.
+		auto* other = dynamic_cast<Box3DBodyImpl3D*>(
+				static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(other_id)));
+
+		const b3Vec3 other_center = b3Body_GetWorldCenter(other_id);
+
+		for (int m = 0; m < pair.manifoldCount && (int32_t)contacts.size() < max_contacts_reported; m++) {
+			const b3Manifold& manifold = pair.manifolds[m];
+			// Godot points the normal from the collider back toward this body, opposite Box3D's A to B.
+			const Vector3 normal = self_is_a
+					? -b3_to_godot(manifold.normal)
+					: b3_to_godot(manifold.normal);
+
+			for (int p = 0; p < manifold.pointCount && (int32_t)contacts.size() < max_contacts_reported; p++) {
+				const b3ManifoldPoint& point = manifold.points[p];
+
+				// Anchors are relative to each body's center of mass.
+				const b3Vec3 self_point = b3Add(self_center, self_is_a ? point.anchorA : point.anchorB);
+				const b3Vec3 other_point = b3Add(other_center, self_is_a ? point.anchorB : point.anchorA);
+
+				Box3DContactPoint3D contact;
+				contact.local_position = b3_to_godot(self_point);
+				contact.local_normal = normal;
+				// totalNormalImpulse covers every sub-step; normalImpulse is only the last.
+				contact.impulse = normal * (real_t)point.totalNormalImpulse;
+				contact.local_velocity = b3_to_godot(b3Body_GetWorldPointVelocity(body_id, self_point));
+				contact.collider_position = b3_to_godot(other_point);
+				if (other != nullptr) {
+					contact.collider_velocity = b3_to_godot(b3Body_GetWorldPointVelocity(other_id, other_point));
+					contact.collider_rid = other->get_rid();
+					contact.collider_instance_id = other->get_instance_id();
+				}
+				contacts.push_back(contact);
+			}
+		}
+	}
+}
+
 void Box3DBodyImpl3D::pre_step() {
 	if (!has_body_id()) {
 		applied_force = Vector3();
@@ -410,29 +461,4 @@ void Box3DBodyImpl3D::pre_step() {
 	}
 	applied_force = Vector3();
 	applied_torque = Vector3();
-}
-
-void Box3DBodyImpl3D::add_collision_exception(const RID& p_excepted_body) {
-	if (collision_exceptions.has(p_excepted_body)) {
-		return;
-	}
-	collision_exceptions.insert(p_excepted_body);
-	refilter_shapes();
-}
-
-void Box3DBodyImpl3D::remove_collision_exception(const RID& p_excepted_body) {
-	if (collision_exceptions.erase(p_excepted_body)) {
-		refilter_shapes();
-	}
-}
-
-bool Box3DBodyImpl3D::has_collision_exception(const RID& p_excepted_body) const {
-	return collision_exceptions.has(p_excepted_body);
-}
-
-void Box3DBodyImpl3D::add_contact(const Box3DBodyContact3D& p_contact) {
-	if (max_contacts_reported <= 0 || contacts.size() >= (uint32_t)max_contacts_reported) {
-		return;
-	}
-	contacts.push_back(p_contact);
 }

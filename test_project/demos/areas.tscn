@@ -1,0 +1,142 @@
+[gd_scene format=3 uid="uid://itg6rkqc1svs"]
+
+[ext_resource type="PackedScene" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" path="res://demos/areas.gd" id="4_script"]
+[ext_resource type="PackedScene" path="res://common/demo_label.tscn" id="9_label"]
+
+[sub_resource type="BoxShape3D" id="WellShape"]
+size = Vector3(5, 11, 5)
+
+[sub_resource type="BoxMesh" id="WellMesh"]
+size = Vector3(5, 11, 5)
+
+[sub_resource type="StandardMaterial3D" id="WellMat"]
+transparency = 1
+albedo_color = Color(0.3, 0.9, 0.45, 0.18)
+
+[sub_resource type="SphereShape3D" id="OrbShape"]
+radius = 6.0
+
+[sub_resource type="StandardMaterial3D" id="OrbMat"]
+emission_enabled = true
+albedo_color = Color(1, 0.85, 0.25, 1)
+emission = Color(1, 0.85, 0.25, 1)
+
+[sub_resource type="SphereMesh" id="OrbMarkerMesh"]
+radius = 0.3
+height = 0.6
+
+[sub_resource type="SphereShape3D" id="BallShape"]
+radius = 0.35
+
+[sub_resource type="SphereMesh" id="BallMesh"]
+radius = 0.35
+height = 0.7
+
+[sub_resource type="StandardMaterial3D" id="BallMat"]
+albedo_color = Color(0.85, 0.88, 0.95, 1)
+
+[node name="Areas" type="Node3D" node_paths=PackedStringArray("hud", "well", "orb")]
+script = ExtResource("4_script")
+description = "Left: an Area3D replacing gravity with zero and damping bodies to a halt. Right: point gravity pulling toward a centre offset from the area's own origin."
+hud = NodePath("DemoHud")
+well = NodePath("ZeroGravityWell")
+orb = NodePath("GravityOrb")
+
+[node name="Stage" parent="." instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 4, 0)
+distance = 22.0
+
+[node name="DemoHud" parent="." instance=ExtResource("3_hud")]
+
+[node name="ZeroGravityWell" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 6, 0)
+gravity_space_override = 3
+gravity_point = false
+gravity = 0.0
+linear_damp_space_override = 3
+linear_damp = 1.0
+
+[node name="Collision" type="CollisionShape3D" parent="ZeroGravityWell"]
+shape = SubResource("WellShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="ZeroGravityWell"]
+mesh = SubResource("WellMesh")
+material_override = SubResource("WellMat")
+
+[node name="Label" parent="ZeroGravityWell" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.2, 0)
+text = "Area3D: gravity REPLACE 0 + damping"
+
+[node name="WellBall1" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 10, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="WellBall1"]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="WellBall1"]
+mesh = SubResource("BallMesh")
+material_override = SubResource("BallMat")
+
+[node name="WellBall2" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 12, 0.6)
+
+[node name="Collision" type="CollisionShape3D" parent="WellBall2"]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="WellBall2"]
+mesh = SubResource("BallMesh")
+material_override = SubResource("BallMat")
+
+[node name="WellBall3" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 14, -0.6)
+
+[node name="Collision" type="CollisionShape3D" parent="WellBall3"]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="WellBall3"]
+mesh = SubResource("BallMesh")
+material_override = SubResource("BallMat")
+
+[node name="GravityOrb" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, 0)
+gravity_space_override = 3
+gravity_point = true
+gravity_point_center = Vector3(0, 3, 0)
+gravity = 15.0
+
+[node name="Collision" type="CollisionShape3D" parent="GravityOrb"]
+shape = SubResource("OrbShape")
+
+[node name="CenterMarker" type="MeshInstance3D" parent="GravityOrb"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+mesh = SubResource("OrbMarkerMesh")
+material_override = SubResource("OrbMat")
+
+[node name="Label" parent="GravityOrb" instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.0, 0)
+text = "Area3D: point gravity (offset centre)"
+
+[node name="OrbBall1" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.5, 7, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="OrbBall1"]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="OrbBall1"]
+mesh = SubResource("BallMesh")
+material_override = SubResource("BallMat")
+
+[node name="OrbBall2" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.5, 8.5, 1.2)
+
+[node name="Collision" type="CollisionShape3D" parent="OrbBall2"]
+shape = SubResource("BallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="OrbBall2"]
+mesh = SubResource("BallMesh")
+material_override = SubResource("BallMat")

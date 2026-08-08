@@ -1,0 +1,84 @@
+[gd_scene format=3 uid="uid://itg6r4qheen8"]
+
+[ext_resource type="PackedScene" uid="uid://itg6r3r77evs" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" uid="uid://brsiorim1y6n3" path="res://common/demo_base.gd" id="4_base"]
+[ext_resource type="PackedScene" uid="uid://itg6ru785lvs" path="res://common/demo_label.tscn" id="9_label"]
+
+[sub_resource type="ConcavePolygonShape3D" id="RampShape"]
+data = PackedVector3Array(4.5, 0, 4.5, -4.5, 0, 4.5, 4.5, 0, -4.5, -4.5, 0, 4.5, -4.5, 0, -4.5, 4.5, 0, -4.5)
+
+[sub_resource type="StandardMaterial3D" id="RampMat"]
+cull_mode = 2
+albedo_color = Color(0.85, 0.5, 0.25, 1)
+
+[sub_resource type="PlaneMesh" id="RampMesh"]
+size = Vector2(9, 9)
+
+[sub_resource type="BoxShape3D" id="CrateShape"]
+size = Vector3(0.9, 0.9, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="CrateMat"]
+albedo_color = Color(0.55, 0.75, 0.9, 1)
+
+[sub_resource type="BoxMesh" id="CrateMesh"]
+size = Vector3(0.9, 0.9, 0.9)
+
+[node name="Trimesh" type="Node3D" unique_id=751551447 node_paths=PackedStringArray("hud")]
+script = ExtResource("4_base")
+description = "A ConcavePolygonShape3D ramp with crates sliding down it.
+Trimesh bodies collide but are not detected by an Area3D, which is a documented Box3D difference."
+hud = NodePath("DemoHud")
+
+[node name="Stage" parent="." unique_id=2130299891 instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." unique_id=1456771638 instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 2.5, 0)
+distance = 18.0
+
+[node name="DemoHud" parent="." unique_id=759606592 instance=ExtResource("3_hud")]
+
+[node name="Ramp" type="StaticBody3D" parent="." unique_id=1043707128]
+transform = Transform3D(1, 0, 0, 0, 0.97812325, 0.20802622, 0, -0.20802622, 0.97812325, 0, 3, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="Ramp" unique_id=708374320]
+shape = SubResource("RampShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Ramp" unique_id=699696848]
+material_override = SubResource("RampMat")
+mesh = SubResource("RampMesh")
+
+[node name="Label" parent="Ramp" unique_id=329285591 instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+text = "ConcavePolygonShape3D (trimesh)"
+
+[node name="Crate1" type="RigidBody3D" parent="." unique_id=1714083333]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 6, -1)
+
+[node name="Collision" type="CollisionShape3D" parent="Crate1" unique_id=1141292067]
+shape = SubResource("CrateShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Crate1" unique_id=1710532367]
+material_override = SubResource("CrateMat")
+mesh = SubResource("CrateMesh")
+
+[node name="Crate2" type="RigidBody3D" parent="." unique_id=1909275976]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, -1.4)
+
+[node name="Collision" type="CollisionShape3D" parent="Crate2" unique_id=1258122041]
+shape = SubResource("CrateShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Crate2" unique_id=15372024]
+material_override = SubResource("CrateMat")
+mesh = SubResource("CrateMesh")
+
+[node name="Crate3" type="RigidBody3D" parent="." unique_id=1896557810]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 8, -1)
+
+[node name="Collision" type="CollisionShape3D" parent="Crate3" unique_id=1408260093]
+shape = SubResource("CrateShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Crate3" unique_id=90659302]
+material_override = SubResource("CrateMat")
+mesh = SubResource("CrateMesh")

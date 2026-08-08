@@ -1,0 +1,96 @@
+[gd_scene format=3 uid="uid://itg6rowa5pps"]
+
+[ext_resource type="PackedScene" uid="uid://itg6r3r77evs" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" uid="uid://bbonkj45wxddx" path="res://demos/exceptions.gd" id="4_script"]
+[ext_resource type="PackedScene" uid="uid://itg6ru785lvs" path="res://common/demo_label.tscn" id="9_label"]
+
+[sub_resource type="BoxShape3D" id="CubeShape"]
+size = Vector3(1.1, 1.1, 1.1)
+
+[sub_resource type="StandardMaterial3D" id="PairMatA"]
+albedo_color = Color(0.35, 0.6, 0.95, 1)
+
+[sub_resource type="BoxMesh" id="CubeMesh"]
+size = Vector3(1.1, 1.1, 1.1)
+
+[sub_resource type="StandardMaterial3D" id="PairMatB"]
+albedo_color = Color(0.2, 0.35, 0.8, 1)
+
+[sub_resource type="StandardMaterial3D" id="ControlMatA"]
+albedo_color = Color(0.95, 0.6, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="ControlMatB"]
+albedo_color = Color(0.8, 0.4, 0.15, 1)
+
+[node name="Exceptions" type="Node3D" unique_id=411089584 node_paths=PackedStringArray("excepted_a", "excepted_b", "control_a", "control_b", "hud")]
+script = ExtResource("4_script")
+excepted_a = NodePath("ExceptedA")
+excepted_b = NodePath("ExceptedB")
+control_a = NodePath("ControlA")
+control_b = NodePath("ControlB")
+description = "Blue: a per-pair collision exception, so these two pass through each other.
+Orange: no exceptions and push apart.
+Press Space to toggle the exception."
+hud = NodePath("DemoHud")
+
+[node name="Stage" parent="." unique_id=1209882580 instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." unique_id=1291687286 instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 2.5, 0)
+distance = 12.0
+
+[node name="DemoHud" parent="." unique_id=486734291 instance=ExtResource("3_hud")]
+
+[node name="ExceptedA" type="RigidBody3D" parent="." unique_id=638800033]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2.5, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="ExceptedA" unique_id=1820564617]
+shape = SubResource("CubeShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="ExceptedA" unique_id=2104457842]
+material_override = SubResource("PairMatA")
+mesh = SubResource("CubeMesh")
+
+[node name="Label" parent="ExceptedA" unique_id=567900247 instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+text = "exception: passes through"
+
+[node name="ExceptedB" type="RigidBody3D" parent="." unique_id=796090080]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 2.9, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="ExceptedB" unique_id=648928222]
+shape = SubResource("CubeShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="ExceptedB" unique_id=1038607331]
+material_override = SubResource("PairMatB")
+mesh = SubResource("CubeMesh")
+
+[node name="ControlA" type="RigidBody3D" parent="." unique_id=338035927]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2.5, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="ControlA" unique_id=116703886]
+shape = SubResource("CubeShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="ControlA" unique_id=1487630916]
+material_override = SubResource("ControlMatA")
+mesh = SubResource("CubeMesh")
+
+[node name="Label" parent="ControlA" unique_id=147324038 instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+text = "no exception: collides"
+
+[node name="ControlB" type="RigidBody3D" parent="." unique_id=903329319]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.4, 2.9, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="ControlB" unique_id=2057176370]
+shape = SubResource("CubeShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="ControlB" unique_id=1191339778]
+material_override = SubResource("ControlMatB")
+mesh = SubResource("CubeMesh")

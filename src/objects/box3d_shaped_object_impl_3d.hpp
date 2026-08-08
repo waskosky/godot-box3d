@@ -28,10 +28,6 @@ public:
 
 	void set_transform(const Transform3D& p_transform);
 
-	void set_collision_layer(uint32_t p_layer) override;
-
-	void set_collision_mask(uint32_t p_mask) override;
-
 	void add_shape(Box3DShapeImpl3D* p_shape, const Transform3D& p_transform, bool p_disabled);
 
 	void remove_shape(const Box3DShapeImpl3D* p_shape);
@@ -48,6 +44,10 @@ public:
 
 	Transform3D get_shape_transform(int32_t p_index) const;
 
+	b3ShapeId get_shape_id(int32_t p_index) const;
+
+	bool has_shape_id(int32_t p_index) const;
+
 	void set_shape_transform(int32_t p_index, const Transform3D& p_transform);
 
 	bool is_shape_disabled(int32_t p_index) const;
@@ -59,13 +59,6 @@ public:
 	// Rebuilds every live b3ShapeId for the current body (used after (re)attaching to a
 	// space, and after body type transitions that need shapes recreated).
 	void rebuild_shapes();
-
-	// Forces Box3D to destroy and recreate contacts for every shape without changing the
-	// Godot collision layer/mask. Used when custom-filter state (such as exceptions)
-	// changes while a contact already exists.
-	void refilter_shapes();
-
-	int32_t find_shape_index(b3ShapeId p_shape_id) const;
 
 protected:
 	// Creates the underlying b3BodyId in the given world using the cached construction
@@ -92,8 +85,6 @@ protected:
 	b3BodyId body_id = b3_nullBodyId;
 
 private:
-	void _sync_shape_filters();
-
 	void _create_shape_instance(Box3DShapeInstance3D& p_instance);
 
 	void _destroy_shape_instance(Box3DShapeInstance3D& p_instance);

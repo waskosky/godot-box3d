@@ -4,12 +4,12 @@ Godot Web exports can load `godot-box3d` when the extension side module and the 
 
 ## Fastest route: use a prebuilt Web bundle
 
-Download the `godot-box3d-web-release` artifact from a successful **Portable Android iOS Web Release** workflow run, or use the same ZIP attached to a project release when available.
+Install the normal desktop addon from the latest release first. Then download the `godot-box3d-web-release` artifact from a successful **Web build and smoke** workflow run, or use the same ZIP attached to a project release when available.
 
 The archive contains:
 
 ```text
-godot-box3d-portable/
+godot-box3d-web/
 ├── addons/godot-box3d/
 │   ├── godot-box3d.gdextension
 │   └── bin/web/
@@ -18,17 +18,21 @@ godot-box3d-portable/
     └── godot-box3d-web-release.zip
 ```
 
-Copy `addons/godot-box3d` into the root of the Godot project:
+Merge `addons/godot-box3d` into the existing addon in the Godot project. Keep the desktop binaries from the normal release and add the new `bin/web` directory:
 
 ```text
 your-project/
 └── addons/godot-box3d/
+    ├── bin/
+    │   ├── libgodot-box3d.so, .dylib, or .dll
+    │   └── web/
+    └── godot-box3d.gdextension
 ```
 
 Open the project with Godot 4.7 when using the supplied templates. Then:
 
 1. Open **Project Settings → Physics → 3D → Physics Engine**.
-2. Select **Box3D Physics (Extension)** and restart the editor.
+2. Select **Box3D Physics** and restart the editor.
 3. Create or edit a Web export preset.
 4. Enable **Extensions Support** and disable **Thread Support**.
 5. Set the custom debug and release templates to the two ZIPs from `web-export-templates/`.
@@ -39,7 +43,7 @@ The equivalent project setting is:
 ```ini
 [physics]
 
-3d/physics_engine="Box3D Physics (Extension)"
+3d/physics_engine="Box3D Physics"
 ```
 
 ## Build the Web bundle from source
@@ -83,8 +87,11 @@ Point `GODOT_BIN` at a Godot 4.7 executable, then export the release smoke scene
 ```bash
 GODOT_BIN=/path/to/godot
 mkdir -p build/web-smoke-release
+mkdir -p web_smoke_project/addons/godot-box3d/bin/web
+cp bin/web/*.wasm web_smoke_project/addons/godot-box3d/bin/web/
 "$GODOT_BIN" --headless \
-  --path test_project \
+  --recovery-mode \
+  --path web_smoke_project \
   --export-release "Web Box3D Smoke" \
   ../build/web-smoke-release/index.html
 ```
@@ -100,7 +107,7 @@ For the automated browser assertion:
 ```
 
 The test passes only when the extension registers, Box3D is the requested backend, a rigid body settles on the floor, an area callback fires, and a hinge moves.
-The portable release workflow runs this release-export smoke test in headless Chromium before it packages the Web and complete portable bundles.
+The Web workflow runs this release-export smoke test in headless Chromium before it packages the bundle.
 
 ## Important compatibility rules
 
@@ -110,4 +117,4 @@ The portable release workflow runs this release-export smoke test in headless Ch
 - Rebuild both the side module and templates when changing the Godot or Emscripten pins.
 - The default build uses WebAssembly SIMD128. Use `BOX3D_DISABLE_SIMD=1 scripts/build_web.sh` only as a diagnostic fallback.
 
-See [`MOBILE_WEB_INTEGRATION.md`](MOBILE_WEB_INTEGRATION.md) for architecture details, mobile targets, packaging, CI, and release validation.
+The dependency versions used for the extension and matching templates are recorded in [`dependencies.lock`](dependencies.lock).

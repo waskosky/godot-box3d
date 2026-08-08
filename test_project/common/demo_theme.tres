@@ -1,0 +1,43 @@
+[gd_resource type="Theme" format=3 uid="uid://itg6r4gdeevs"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_s81bk"]
+bg_color = Color(0.3137255, 0.28627452, 0.27058825, 1)
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7dhw8"]
+bg_color = Color(0.23529412, 0.21960784, 0.21176471, 1)
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u5lst"]
+bg_color = Color(0.3137255, 0.28627452, 0.27058825, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.98039216, 0.7411765, 0.18431373, 1)
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
+
+[resource]
+Button/colors/font_color = Color(0.92156863, 0.85882354, 0.69803923, 1)
+Button/styles/hover = SubResource("StyleBoxFlat_s81bk")
+Button/styles/normal = SubResource("StyleBoxFlat_7dhw8")
+Button/styles/pressed = SubResource("StyleBoxFlat_u5lst")
+DemoStatus/base_type = &"Label"
+DemoStatus/colors/font_color = Color(0.84313726, 0.6, 0.12941177, 1)
+DemoStatus/font_sizes/font_size = 16
+DemoTitle/base_type = &"Label"
+DemoTitle/colors/font_color = Color(0.98039216, 0.7411765, 0.18431373, 1)
+DemoTitle/font_sizes/font_size = 32
+Label/colors/font_color = Color(0.94, 0.95, 0.97, 1)
+Label/colors/font_outline_color = Color(0.16, 0.16, 0.18, 1)
+Label/constants/outline_size = 5
+Label/font_sizes/font_size = 14

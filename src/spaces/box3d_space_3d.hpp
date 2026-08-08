@@ -4,7 +4,6 @@
 #include <godot_cpp/templates/hash_set.hpp>
 #include <godot_cpp/templates/local_vector.hpp>
 #include <godot_cpp/variant/callable.hpp>
-#include <godot_cpp/variant/packed_vector3_array.hpp>
 #include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/transform3d.hpp>
 
@@ -52,14 +51,6 @@ public:
 
 	bool is_flushing_queries() const { return flushing_queries; }
 
-	void set_debug_contact_capacity(int32_t p_capacity);
-
-	PackedVector3Array get_debug_contacts() const { return debug_contacts; }
-
-	int32_t get_debug_contact_count() const { return debug_contacts.size(); }
-
-	int32_t get_process_info(PhysicsServer3D::ProcessInfo p_process_info) const;
-
 	void register_body(Box3DBodyImpl3D* p_body) { bodies.insert(p_body); }
 
 	void unregister_body(Box3DBodyImpl3D* p_body) { bodies.erase(p_body); }
@@ -77,36 +68,38 @@ public:
 	// call_deferred).
 	void flush_queries();
 
-private:
-	struct PendingStateSync {
-		RID body_rid;
+	struct AreaOverrides {
+		// Area contribution only; world gravity is added on top unless replaces_world is set.
+		Vector3 gravity;
+		real_t linear_damp = 0.0;
+		real_t angular_damp = 0.0;
+		bool affects_gravity = false;
+		bool replaces_world_gravity = false;
 	};
 
+	// Resolves the areas overlapping a body into the gravity and damping it should feel.
+	AreaOverrides compute_area_overrides(Box3DBodyImpl3D* p_body) const;
+
+private:
 	struct PendingAreaEvent {
 		Callable callback;
 		PhysicsServer3D::AreaBodyStatus status = PhysicsServer3D::AREA_BODY_ADDED;
 		RID other_rid;
 		uint64_t other_instance_id = 0;
-		int32_t other_shape = -1;
-		int32_t area_shape = -1;
 	};
 
-	void _apply_area_overrides(const Vector3& p_default_gravity);
+	void _call_body_queries();
 
-	void _queue_state_sync(Box3DBodyImpl3D* p_body);
+	void _apply_area_overrides();
 
 	void _pull_body_events();
 
 	void _pull_sensor_events();
 
-	void _pull_contact_events();
-
 	void _queue_area_event(
 			Box3DAreaImpl3D* p_area,
 			Box3DShapedObjectImpl3D* p_other,
-			PhysicsServer3D::AreaBodyStatus p_status,
-			int32_t p_other_shape,
-			int32_t p_area_shape);
+			PhysicsServer3D::AreaBodyStatus p_status);
 
 	RID rid;
 	b3WorldId world_id = b3_nullWorldId;
@@ -116,10 +109,7 @@ private:
 	HashSet<Box3DBodyImpl3D*> bodies;
 	HashSet<Box3DAreaImpl3D*> areas;
 
-	LocalVector<PendingStateSync> pending_state_syncs;
 	LocalVector<PendingAreaEvent> pending_area_events;
-	PackedVector3Array debug_contacts;
-	int32_t debug_contact_capacity = 0;
 
 	float last_step = 0.0f;
 	bool active = false;

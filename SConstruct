@@ -172,10 +172,4 @@ library = env.SharedLibrary(
 
 test_copy = env.Install(os.path.join(TEST_ADDON_DIR, "bin", platform_name), library)
 
-# Ensure a build also refreshes the test project's descriptor.
-descriptor_copy = env.InstallAs(
-    os.path.join(TEST_ADDON_DIR, "godot-box3d.gdextension"),
-    "godot-box3d.gdextension",
-)
-
-Default(library, test_copy, descriptor_copy)
+Default(library, test_copy)

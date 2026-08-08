@@ -1,0 +1,278 @@
+/*
+Palette and layout follow box2d.org/documentation3d, which is Doxygen 1.17 dark plus a Box2D
+accent sheet, so these docs read as a sibling of the upstream Box3D reference.
+*/
+
+:root {
+	--page: #292a2d;
+	--panel: #32363d;
+	--text: #d8d8d8;
+	--muted: #9aa0a6;
+	--accent: #67d8ef;
+	--border: #3f444c;
+	--note: #456114;
+	--body-font: Roboto, 'Lucida Grande', Geneva, Helvetica, Arial, sans-serif;
+	--mono-font: 'JetBrains Mono', Consolas, Monaco, 'Ubuntu Mono', monospace;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background-color: var(--page);
+	color: var(--text);
+	font-family: var(--body-font);
+	font-size: 15px;
+	line-height: 1.6;
+}
+
+a {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+/* Header: logo, name with version, tagline, matching the Doxygen titlearea */
+#titlearea {
+	background-color: var(--page);
+	border-bottom: 1px solid var(--border);
+}
+
+.title-inner {
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 14px 24px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.project {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex: 1;
+	color: var(--text);
+}
+
+.project:hover {
+	text-decoration: none;
+}
+
+.project-logo {
+	width: 52px;
+	height: 52px;
+	flex-shrink: 0;
+}
+
+.project-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.project-name {
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.project-number {
+	font-size: 14px;
+	font-weight: 400;
+	color: var(--muted);
+	margin-left: 8px;
+}
+
+.project-brief {
+	font-size: 13px;
+	color: var(--muted);
+}
+
+.repo-link {
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	padding: 5px 12px;
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+/* Nav strip, standing in for Doxygen's tab bar */
+#tabs {
+	background-color: var(--panel);
+	border-bottom: 1px solid var(--border);
+}
+
+.tablist {
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 0 24px;
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+}
+
+.tablist a {
+	display: block;
+	padding: 9px 14px;
+	font-size: 13px;
+	color: var(--text);
+}
+
+.tablist a:hover {
+	background-color: var(--page);
+	text-decoration: none;
+}
+
+.tablist .current a {
+	color: var(--accent);
+	box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* Content, capped at the same 1000px as the upstream docs */
+.page {
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 8px 24px 48px;
+}
+
+h1, h2, h3, h4 {
+	line-height: 1.25;
+	margin: 1.6em 0 0.6em;
+}
+
+h1 {
+	font-size: 28px;
+	margin-top: 0.8em;
+}
+
+h2 {
+	font-size: 21px;
+	color: var(--accent);
+	border-bottom: 1px solid var(--border);
+	padding-bottom: 6px;
+}
+
+h3 {
+	font-size: 17px;
+}
+
+code {
+	font-family: var(--mono-font);
+	font-size: 0.88em;
+	background-color: var(--panel);
+	border-radius: 3px;
+	padding: 2px 5px;
+}
+
+pre {
+	background-color: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	padding: 12px 14px;
+	overflow-x: auto;
+}
+
+pre code {
+	background: none;
+	padding: 0;
+	font-size: 13px;
+}
+
+table {
+	border-collapse: collapse;
+	width: 100%;
+	margin: 1.2em 0;
+	display: block;
+	overflow-x: auto;
+}
+
+th, td {
+	border: 1px solid var(--border);
+	padding: 7px 11px;
+	text-align: left;
+}
+
+th {
+	background-color: var(--panel);
+	font-weight: 600;
+}
+
+tr:nth-child(even) td {
+	background-color: #2e3136;
+}
+
+/* Callout, matching the filled olive box upstream uses for cautions */
+blockquote {
+	background-color: var(--note);
+	border: 1px solid #000;
+	margin: 1.2em 0;
+	padding: 12px 16px;
+}
+
+blockquote p {
+	margin: 0;
+}
+
+blockquote a {
+	color: #cdefff;
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 4px;
+	border: 1px solid var(--border);
+	display: block;
+	margin: 1em 0;
+}
+
+/* The logo is a transparent SVG on a dark header, so it takes none of the image chrome */
+.project-logo {
+	border: none;
+	border-radius: 0;
+	margin: 0;
+}
+
+hr {
+	border: none;
+	border-top: 1px solid var(--border);
+	margin: 2em 0;
+}
+
+footer {
+	border-top: 1px solid var(--border);
+	margin-top: 32px;
+	padding: 18px 24px 32px;
+	color: var(--muted);
+	font-size: 13px;
+	text-align: center;
+}
+
+footer p {
+	max-width: 1000px;
+	margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+	.title-inner {
+		flex-wrap: wrap;
+	}
+
+	.project-name {
+		font-size: 20px;
+	}
+
+	.page {
+		padding: 8px 16px 40px;
+	}
+
+	.tablist {
+		padding: 0 8px;
+	}
+}

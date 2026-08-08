@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://itg6r3r77evs"]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_1"]
+sky_top_color = Color(0.11372549, 0.1254902, 0.12941177, 1)
+sky_horizon_color = Color(0.23529412, 0.21960784, 0.21176471, 1)
+ground_bottom_color = Color(0.15686275, 0.15686275, 0.15686275, 1)
+ground_horizon_color = Color(0.3137255, 0.28627452, 0.27058825, 1)
+
+[sub_resource type="Sky" id="Sky_2"]
+sky_material = SubResource("Sky_1")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.11372549, 0.1254902, 0.12941177, 1)
+background_energy_multiplier = 0.8
+sky = SubResource("Sky_2")
+ambient_light_source = 2
+ambient_light_color = Color(0.23529412, 0.21960784, 0.21176471, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 2
+
+[sub_resource type="BoxShape3D" id="GroundShape_1"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="StandardMaterial3D" id="GroundMat_1"]
+albedo_color = Color(0.38, 0.4, 0.44, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="GroundMesh_1"]
+size = Vector3(40, 1, 40)
+
+[node name="DemoStage" type="Node3D" unique_id=712301180]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2022964929]
+environment = SubResource("Env_1")
+
+[node name="SunLight" type="DirectionalLight3D" parent="." unique_id=2116954877]
+transform = Transform3D(0.8660254, -0.49240386, 0.08682411, 0, 0.17364822, 0.9848077, -0.5, -0.8528685, 0.15038377, 0, 12, 0)
+light_color = Color(0.9490196, 0.7764706, 0.42745098, 1)
+light_angular_distance = 1.5
+shadow_enabled = true
+
+[node name="Ground" type="StaticBody3D" parent="." unique_id=376461343]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="Ground" unique_id=767640667]
+shape = SubResource("GroundShape_1")
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground" unique_id=1410108527]
+material_override = SubResource("GroundMat_1")
+mesh = SubResource("GroundMesh_1")

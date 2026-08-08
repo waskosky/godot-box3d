@@ -27,6 +27,11 @@ public:
 	// b3ShapeId built from it exists.
 	const b3MeshData* get_mesh() const { return mesh; }
 
+	const PackedVector3Array& get_faces() const { return faces; }
+
+	// Box3D meshes carry no transform, so an offset instance needs its own baked copy.
+	static b3MeshData* build_mesh(const PackedVector3Array& p_faces, const Transform3D& p_transform);
+
 private:
 	void _rebuild_mesh();
 

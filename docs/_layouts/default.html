@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if page.title and page.url != "/" %}{{ page.title }} &middot; {% endif %}{{ site.title }}</title>
+<meta name="description" content="{{ page.description | default: site.description }}">
+<link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+<link rel="icon" href="{{ '/images/logo.svg' | relative_url }}" type="image/svg+xml">
+</head>
+<body>
+
+<div id="titlearea">
+	<div class="title-inner">
+		<a class="project" href="{{ '/' | relative_url }}">
+			<img class="project-logo" src="{{ '/images/logo.svg' | relative_url }}" alt="">
+			<span class="project-text">
+				<span class="project-name">godot-box3d<span class="project-number">{{ site.version }}</span></span>
+				<span class="project-brief">{{ site.description }}</span>
+			</span>
+		</a>
+		<a class="repo-link" href="{{ site.github_url }}">GitHub</a>
+	</div>
+</div>
+
+<nav id="tabs">
+	<ul class="tablist">
+		{% for item in site.nav %}
+		<li{% if page.url == item.url %} class="current"{% endif %}><a href="{{ item.url | relative_url }}">{{ item.title }}</a></li>
+		{% endfor %}
+	</ul>
+</nav>
+
+<div class="page">
+	<div class="contents">
+		{{ content }}
+	</div>
+</div>
+
+<footer>
+	<p>
+		<a href="{{ site.github_url }}">godot-box3d</a> is MIT licensed.
+		<a href="https://github.com/erincatto/box3d">Box3D</a> is by Erin Catto, also MIT.
+	</p>
+</footer>
+
+</body>
+</html>

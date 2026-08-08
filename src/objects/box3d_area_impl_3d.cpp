@@ -81,18 +81,22 @@ void Box3DAreaImpl3D::set_param(PhysicsServer3D::AreaParameter p_param, const Va
 }
 
 Vector3 Box3DAreaImpl3D::compute_gravity(const Vector3& p_position) const {
-	if (point_gravity) {
-		const Vector3 to_center = get_transform().origin - p_position;
-		const float distance = (float)to_center.length();
-		if (distance < 0.0001f) {
-			return Vector3();
-		}
-		const float distance_scale = point_gravity_distance > 0.0f
-				? (float)(point_gravity_distance * point_gravity_distance) / (distance * distance)
-				: 1.0f;
-		return to_center.normalized() * gravity * distance_scale;
+	if (!point_gravity) {
+		// Godot does not normalize the direction, so its length scales the strength.
+		return gravity_vector * gravity;
 	}
-	return gravity_vector.normalized() * gravity;
+
+	// When gravity is a point, Godot carries the center in gravity_vector, in area space.
+	const Vector3 to_center = get_transform().xform(gravity_vector) - p_position;
+	if (point_gravity_distance <= 0.0f) {
+		return to_center.normalized() * gravity;
+	}
+	const real_t distance_squared = to_center.length_squared();
+	if (distance_squared <= 0.0) {
+		return Vector3();
+	}
+	const real_t strength = gravity * point_gravity_distance * point_gravity_distance / distance_squared;
+	return to_center.normalized() * strength;
 }
 
 bool Box3DAreaImpl3D::add_overlap(Box3DShapedObjectImpl3D* p_other) {

@@ -29,7 +29,7 @@ void initialize_box3d_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_VIRTUAL_CLASS(Box3DPhysicsServer3D);
 
 		PhysicsServer3DManager::get_singleton()->register_server(
-				"Box3D Physics (Extension)",
+				"Box3D Physics",
 				callable_mp_static(&_create_box3d_physics_server));
 	}
 }

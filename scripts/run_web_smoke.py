@@ -100,7 +100,7 @@ def main() -> int:
         server.server_close()
 
     required = {
-        "backend": any("Requested backend: Box3D Physics (Extension)" in line for line in console_lines),
+        "backend": any("Requested backend: Box3D Physics" in line for line in console_lines),
         "extension": any("Extension class registered: true" in line for line in console_lines),
         "physics": "RESULT: PASS" in console_lines,
     }

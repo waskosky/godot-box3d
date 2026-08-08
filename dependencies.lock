@@ -1,4 +1,4 @@
-# Reproducible dependency and toolchain pins for the portable build.
+# Reproducible dependency and toolchain pins for the Web build.
 # This file is sourced by the Bash build scripts; keep values shell-safe.
 
 GODOT_COMPATIBILITY_MINIMUM="4.3"
@@ -8,8 +8,8 @@ GODOT_CPP_LABEL="godot-4.3-stable"
 GODOT_CPP_REF="fbbf9ec4efd8f1055d00edb8d926eef8ba4c2cce"
 
 BOX3D_REPOSITORY="https://github.com/erincatto/box3d.git"
-BOX3D_LABEL="v0.1.0"
-BOX3D_REF="8441b4a06d6d09dcfb0b0f704df4d847d1437b92"
+BOX3D_LABEL="upstream main (2026-07-29)"
+BOX3D_REF="3fc20f5b453ba9e14cdf54ecafa87a2a4bcdf53c"
 
 GODOT_ENGINE_REPOSITORY="https://github.com/godotengine/godot.git"
 GODOT_ENGINE_LABEL="4.7-stable"

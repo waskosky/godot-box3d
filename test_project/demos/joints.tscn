@@ -1,0 +1,165 @@
+[gd_scene format=3 uid="uid://itg6rtnhftos"]
+
+[ext_resource type="PackedScene" uid="uid://itg6r3r77evs" path="res://common/demo_stage.tscn" id="1_stage"]
+[ext_resource type="PackedScene" uid="uid://i5tul4a8e0vs" path="res://common/orbit_camera.tscn" id="2_cam"]
+[ext_resource type="PackedScene" uid="uid://b3ddemohud001" path="res://common/demo_hud.tscn" id="3_hud"]
+[ext_resource type="Script" uid="uid://d1fgl103tge7u" path="res://demos/joints.gd" id="4_script"]
+[ext_resource type="PackedScene" uid="uid://itg6ru785lvs" path="res://common/demo_label.tscn" id="9_label"]
+
+[sub_resource type="BoxShape3D" id="AnchorShape"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="AnchorMat"]
+albedo_color = Color(0.35, 0.36, 0.4, 1)
+
+[sub_resource type="BoxMesh" id="AnchorMesh"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="BoxShape3D" id="DoorShape"]
+size = Vector3(2, 2.4, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="DoorMat"]
+albedo_color = Color(0.8, 0.45, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="DoorMesh"]
+size = Vector3(2, 2.4, 0.12)
+
+[sub_resource type="SphereShape3D" id="BobShape"]
+radius = 0.4
+
+[sub_resource type="StandardMaterial3D" id="BobMat"]
+albedo_color = Color(0.5, 0.75, 0.9, 1)
+
+[sub_resource type="SphereMesh" id="BobMesh"]
+radius = 0.4
+height = 0.8
+
+[sub_resource type="CylinderMesh" id="RailMesh"]
+top_radius = 0.06
+bottom_radius = 0.06
+height = 4.4
+
+[sub_resource type="BoxShape3D" id="SlideShape"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="SlideMat"]
+albedo_color = Color(0.6, 0.85, 0.5, 1)
+
+[sub_resource type="BoxMesh" id="SlideMesh"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[node name="Joints" type="Node3D" unique_id=270446141 node_paths=PackedStringArray("pendulum_joint", "door", "slider_box", "hud")]
+script = ExtResource("4_script")
+pendulum_joint = NodePath("PendulumJoint")
+door = NodePath("Door")
+slider_box = NodePath("SliderBox")
+description = "Left: a hinge joint swinging a door.
+Middle: a pin joint whose anchor sweeps every frame.
+Right: a slider moving between its limits."
+hud = NodePath("DemoHud")
+
+[node name="Stage" parent="." unique_id=1915083614 instance=ExtResource("1_stage")]
+
+[node name="OrbitCamera" parent="." unique_id=1613260903 instance=ExtResource("2_cam")]
+transform = Transform3D(1, 0, 0, 0, 0.927, 0.375, 0, -0.375, 0.927, 0, 3, 0)
+
+[node name="DemoHud" parent="." unique_id=1309242876 instance=ExtResource("3_hud")]
+
+[node name="DoorAnchor" type="StaticBody3D" parent="." unique_id=1459233527]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 2.6, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="DoorAnchor" unique_id=2081271419]
+shape = SubResource("AnchorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="DoorAnchor" unique_id=1825663843]
+material_override = SubResource("AnchorMat")
+mesh = SubResource("AnchorMesh")
+
+[node name="Door" type="RigidBody3D" parent="." unique_id=2111457059]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2.6, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="Door" unique_id=477302759]
+shape = SubResource("DoorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Door" unique_id=1013476330]
+material_override = SubResource("DoorMat")
+mesh = SubResource("DoorMesh")
+
+[node name="Label" parent="Door" unique_id=170148666 instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+text = "HingeJoint3D (motorised)"
+
+[node name="DoorHinge" type="HingeJoint3D" parent="." unique_id=1661736345]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -4, 2.6, 0)
+node_a = NodePath("../DoorAnchor")
+node_b = NodePath("../Door")
+motor/enable = true
+motor/target_velocity = 1.2
+motor/max_impulse = 512.0
+
+[node name="PendulumAnchor" type="StaticBody3D" parent="." unique_id=1689273691]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="PendulumAnchor" unique_id=1985419334]
+shape = SubResource("AnchorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="PendulumAnchor" unique_id=1538405403]
+material_override = SubResource("AnchorMat")
+mesh = SubResource("AnchorMesh")
+
+[node name="PendulumBob" type="RigidBody3D" parent="." unique_id=1261022180]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="PendulumBob" unique_id=369901219]
+shape = SubResource("BobShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="PendulumBob" unique_id=1067013576]
+material_override = SubResource("BobMat")
+mesh = SubResource("BobMesh")
+
+[node name="Label" parent="PendulumBob" unique_id=2084482774 instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+text = "PinJoint3D (moving anchor)"
+
+[node name="PendulumJoint" type="PinJoint3D" parent="." unique_id=1076672869]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+node_a = NodePath("../PendulumAnchor")
+node_b = NodePath("../PendulumBob")
+
+[node name="SliderAnchor" type="StaticBody3D" parent="." unique_id=2034095730]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 3.5, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="SliderAnchor" unique_id=1864220558]
+shape = SubResource("AnchorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="SliderAnchor" unique_id=703583753]
+material_override = SubResource("AnchorMat")
+mesh = SubResource("AnchorMesh")
+
+[node name="SliderRail" type="MeshInstance3D" parent="." unique_id=937729779]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 4, 3.5, 0)
+material_override = SubResource("AnchorMat")
+mesh = SubResource("RailMesh")
+
+[node name="SliderBox" type="RigidBody3D" parent="." unique_id=1089343973]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 3.5, 0)
+gravity_scale = 0.0
+
+[node name="Collision" type="CollisionShape3D" parent="SliderBox" unique_id=1415159588]
+shape = SubResource("SlideShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="SliderBox" unique_id=403046861]
+material_override = SubResource("SlideMat")
+mesh = SubResource("SlideMesh")
+
+[node name="Label" parent="SliderBox" unique_id=993789224 instance=ExtResource("9_label")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+text = "SliderJoint3D"
+
+[node name="BoxSlider" type="SliderJoint3D" parent="." unique_id=1378765981]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 3.5, 0)
+node_a = NodePath("../SliderAnchor")
+node_b = NodePath("../SliderBox")
+linear_limit/upper_distance = 2.0
+linear_limit/lower_distance = -2.0
