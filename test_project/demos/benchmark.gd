@@ -44,6 +44,7 @@ var _pairs: PackedInt32Array = PackedInt32Array()
 var _islands: PackedInt32Array = PackedInt32Array()
 var _memory_mb: PackedFloat32Array = PackedFloat32Array()
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _autostart: bool = false
 
 
 func _ready() -> void:
@@ -52,6 +53,7 @@ func _ready() -> void:
 	start_button.pressed.connect(_on_start_pressed)
 	export_button.pressed.connect(_on_export_pressed)
 	_reset()
+	_apply_cli_args()
 
 
 func _physics_process(delta: float) -> void:
@@ -160,6 +162,9 @@ func _on_start_pressed() -> void:
 func _finish() -> void:
 	_state = State.FINISHED
 	start_button.text = "Run again"
+	if _autostart:
+		_on_export_pressed()
+		get_tree().quit()
 
 
 func _on_export_pressed() -> void:
@@ -200,6 +205,16 @@ func _on_export_pressed() -> void:
 	report.close()
 
 	set_status("Exported to %s" % ProjectSettings.globalize_path("%s.png" % base))
+
+
+func _apply_cli_args() -> void:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg == "--bench-autostart":
+			_autostart = true
+		elif arg.begins_with("--bench-batch="):
+			batch_size.value = float(arg.get_slice("=", 1))
+	if _autostart:
+		_on_start_pressed()
 
 
 func _reset() -> void:

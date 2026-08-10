@@ -33,6 +33,7 @@ Box3D is worth trying because of where it came from. [Erin Catto](https://x.com/
 - Contact monitoring, so `RigidBody3D` reports real contact points, normals, and impulses
 - Per-pair collision exceptions
 - Joints: pin, hinge, and slider (pin anchors can be moved after creation)
+- Multithreaded solver: auto-detects physical cores, overridable via `physics/box3d/worker_count`
 
 ## What's left
 
@@ -41,7 +42,7 @@ Box3D is worth trying because of where it came from. [Erin Catto](https://x.com/
 - `Generic6DOFJoint3D` (Box3D has no per-axis lock/limit/motor constraint, so there is no faithful mapping)
 - `SoftBody3D`
 - Per-shape indices in query and contact results (multi-shape bodies always report shape 0)
-- Threading and solver profiling
+- Solver profiling
 - macOS universal binaries and notarization
 
 ## Benchmark
@@ -55,7 +56,7 @@ A 4096-box drop test, same scene and seed on every backend. Box3D held the 60 FP
 | Godot Physics | 1044 | 54.6 ms | 235.5 ms | 306.0 ms | 177 MB |
 | Rapier3D | 684 | 79.2 ms | 249.3 ms | 303.2 ms | 177 MB |
 
-One workload on one machine, and all four are past budget well before 4096 bodies, so this measures degradation under overload rather than comfortable capacity. See the [README](https://github.com/bearlikelion/godot-box3d#benchmarks) for the full caveats.
+One workload on one machine, and all four are past budget well before 4096 bodies, so this measures degradation under overload rather than comfortable capacity. The Box3D column predates the multithreaded solver and was measured with a single worker; threading improves its step time at high body counts by roughly 1.5x. See the [README](https://github.com/bearlikelion/godot-box3d#benchmarks) for the full caveats.
 
 ## License
 

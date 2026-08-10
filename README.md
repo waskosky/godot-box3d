@@ -38,7 +38,7 @@ The trade is structural. `PhysicsServer3D` has no entry point for `b3World_Explo
 
 Use this if you have an existing project or want stock nodes and addons to work. Use box3d-godot if you want Box3D's own feature surface and don't mind building scenes around its nodes. Neither is production-ready.
 
-**Currently behind box3d-godot on:** *joint types, ConeTwist and 6DOF, per-shape indices in query results, threading, profiling, and Android support.*
+**Currently behind box3d-godot on:** *joint types, ConeTwist and 6DOF, per-shape indices in query results, profiling, and Android support.*
 
 ## What works
 
@@ -50,6 +50,7 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - Contact monitoring, so `RigidBody3D` reports real contact points, normals, and impulses
 - Per-pair collision exceptions
 - Joints: pin, hinge, and slider (pin anchors can be moved after creation)
+- Multithreaded solver: the worker count auto-detects physical cores and can be overridden with the `physics/box3d/worker_count` project setting (results are deterministic across worker counts)
 - A test project with a demo hub, a deterministic benchmark, and 19 headless regression tests
 
 ## What's left to do
@@ -59,7 +60,7 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - `Generic6DOFJoint3D` (Box3D has no per-axis lock/limit/motor constraint, so there is no faithful mapping; use `PinJoint3D`, `HingeJoint3D`, or `SliderJoint3D` instead)
 - `SoftBody3D`
 - Per-shape indices in query and contact results (multi-shape bodies always report shape 0)
-- Threading and solver profiling
+- Solver profiling
 - macOS support: universal binaries and notarization (arm64 builds compile but are untested)
 - More platforms and architectures (currently Linux, Windows, and Web)
 - Performance benchmarking and tuning
@@ -85,7 +86,7 @@ Use this if you have an existing project or want stock nodes and addons to work.
 
 The demo project's benchmark scene drops boxes onto a fixed lattice from a fixed seed, 36 at a time every 0.5s, until 4096 bodies are in the world. Same scene, same placement, same seed on every backend, so the only variable is the physics engine.
 
-Run on Linux, Godot 4.7.2.rc, 4096 boxes over 57s. Lower is better except for the first column.
+Run on Linux, Godot 4.7.2.rc, 4096 boxes over 57s. Lower is better except for the first column. These numbers predate the multithreaded solver, so the Box3D column was measured with a single worker; with threading enabled its step time at high body counts improves by roughly 1.5x.
 
 | Backend | Bodies at 16.66 ms | Median step | p95 step | Peak step | Memory |
 |---|---|---|---|---|---|
@@ -127,6 +128,8 @@ your-project/
 ```
 
 Then set **Project Settings → Physics → 3D → Physics Engine** to `Box3D Physics` and restart. The physics server is built once at startup, so the change needs a restart.
+
+The solver is multithreaded. By default it uses one worker per physical core (efficiency cores and hyperthreads are excluded, since they slow the solver's synchronised stages down). To override it, set `physics/box3d/worker_count` (visible with Advanced Settings on) to an explicit count; `0` means auto. This also needs a restart, and simulation results are identical at any worker count.
 
 > **macOS is a work in progress.** Builds are Apple Silicon (arm64) only and are not notarized, so Intel Macs cannot load the library and Gatekeeper will need convincing on any Mac. Linux and Windows are the tested platforms. macOS is untested beyond compiling, so treat it as unsupported for now.
 
