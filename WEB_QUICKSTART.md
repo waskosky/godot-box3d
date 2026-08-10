@@ -113,6 +113,7 @@ The Web workflow runs this release-export smoke test in headless Chromium before
 
 - Use the supplied custom templates. Standard Godot Web templates do not enable GDExtension dynamic linking.
 - Keep extension support enabled and thread support disabled for this profile.
+- The supported no-thread profile always runs Box3D with one worker.
 - Do not mix a side module and Godot template built with different Emscripten versions.
 - Rebuild both the side module and templates when changing the Godot or Emscripten pins.
 - The default build uses WebAssembly SIMD128. Use `BOX3D_DISABLE_SIMD=1 scripts/build_web.sh` only as a diagnostic fallback.
