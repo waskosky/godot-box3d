@@ -15,6 +15,7 @@ window/size/viewport_height=540
 [physics]
 
 3d/physics_engine="Box3D Physics"
+box3d/worker_count=8
 
 [rendering]
 
