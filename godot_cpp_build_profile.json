@@ -9,6 +9,7 @@
     "PhysicsServer3D",
     "PhysicsServer3DExtension",
     "PhysicsServer3DManager",
-    "PhysicsServer3DRenderingServerHandler"
+    "PhysicsServer3DRenderingServerHandler",
+    "ProjectSettings"
   ]
 }
