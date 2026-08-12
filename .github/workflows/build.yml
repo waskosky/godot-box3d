@@ -130,7 +130,29 @@ jobs:
             echo '### Minimum-version tests did not run' >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  sanitizers:
+  sanitizer-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
+
+      - name: Configure ASan and UBSan build
+        run: >-
+          cmake -B build-sanitized -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build with ASan and UBSan
+        run: cmake --build build-sanitized --target godot-box3d --parallel
+
+  undefined-behavior:
     runs-on: ubuntu-latest
 
     steps:
@@ -155,27 +177,24 @@ jobs:
           unzip -o "$RUNNER_TEMP/${GODOT_ARCHIVE}" -d "$RUNNER_TEMP/godot"
           chmod +x "$RUNNER_TEMP/godot/${GODOT_EXECUTABLE}"
 
-      - name: Configure ASan and UBSan build
+      - name: Configure UBSan build
         run: >-
-          cmake -B build-sanitized -G Ninja
+          cmake -B build-ubsan -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
-          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
-          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
-          -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
+          -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer"
+          -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer"
+          -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=undefined"
 
-      - name: Run headless tests with sanitizers
+      - name: Run headless tests with UBSan
         shell: bash
         env:
           GODOT_BIN: ${{ runner.temp }}/godot/Godot_v4.7-stable_linux.x86_64
-          BUILD_DIR: ${{ github.workspace }}/build-sanitized
-          ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+          BUILD_DIR: ${{ github.workspace }}/build-ubsan
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-        run: |
-          export LD_PRELOAD="$(gcc -print-file-name=libasan.so)"
-          scripts/run_headless_tests.sh
+        run: scripts/run_headless_tests.sh
 
   release:
-    needs: [build, compatibility, sanitizers]
+    needs: [build, compatibility, sanitizer-build, undefined-behavior]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
