@@ -178,14 +178,16 @@ jobs:
           chmod +x "$RUNNER_TEMP/godot/${GODOT_EXECUTABLE}"
 
       - name: Configure UBSan build
-        # Box3D's x86 SIMD loader intentionally uses movsd to read two floats from a
-        # float-aligned address. The instruction accepts that operand, but GCC's C
-        # alignment instrumentation diagnoses the intrinsic's double-pointer type.
-        # Keep full UBSan coverage for this C++ extension and every other C category.
+        # Box3D's x86 SIMD loader intentionally uses movsd through a double-pointer
+        # intrinsic on float-aligned data, which GCC's alignment instrumentation
+        # diagnoses even though the instruction accepts it. Exercise Box3D's supported
+        # scalar path here so every UBSan category stays enabled for all C and C++ code.
+        # The regular native and Web jobs exercise the production SIMD path.
         run: >-
           cmake -B build-ubsan -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
-          -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-sanitize=alignment -fno-omit-frame-pointer"
+          -DBOX3D_DISABLE_SIMD=ON
+          -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer"
           -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer"
           -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=undefined"
 
