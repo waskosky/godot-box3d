@@ -349,6 +349,9 @@ void Box3DShapedObjectImpl3D::_create_shape_instance(Box3DShapeInstance3D& p_ins
 
 void Box3DShapedObjectImpl3D::_destroy_shape_instance(Box3DShapeInstance3D& p_instance) {
 	if (p_instance.has_shape_id()) {
+		if (space != nullptr) {
+			space->remove_shape_overlaps(p_instance.get_shape_id());
+		}
 		b3DestroyShape(p_instance.get_shape_id(), true);
 		p_instance.set_shape_id(b3_nullShapeId);
 	}

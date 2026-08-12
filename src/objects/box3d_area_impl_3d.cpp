@@ -121,3 +121,7 @@ bool Box3DAreaImpl3D::remove_overlap(Box3DShapedObjectImpl3D* p_other) {
 	}
 	return false;
 }
+
+bool Box3DAreaImpl3D::remove_overlap_object(Box3DShapedObjectImpl3D* p_other) {
+	return overlaps.erase(p_other);
+}
