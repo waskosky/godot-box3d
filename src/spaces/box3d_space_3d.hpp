@@ -53,11 +53,15 @@ public:
 
 	void register_body(Box3DBodyImpl3D* p_body) { bodies.insert(p_body); }
 
-	void unregister_body(Box3DBodyImpl3D* p_body) { bodies.erase(p_body); }
+	void unregister_body(Box3DBodyImpl3D* p_body);
 
 	void register_area(Box3DAreaImpl3D* p_area) { areas.insert(p_area); }
 
-	void unregister_area(Box3DAreaImpl3D* p_area) { areas.erase(p_area); }
+	void unregister_area(Box3DAreaImpl3D* p_area);
+
+	// Removes cached sensor overlap counts involving a fixture before it is destroyed.
+	// Box3D end events may carry an invalid ID for either side after destruction.
+	void remove_shape_overlaps(b3ShapeId p_shape_id);
 
 	// Applies area gravity/damp overrides + constant-force accumulators, steps the world,
 	// then immediately drains every Box3D event array into the pending queues below.
@@ -82,10 +86,11 @@ public:
 
 private:
 	struct PendingAreaEvent {
-		Callable callback;
+		RID area_rid;
 		PhysicsServer3D::AreaBodyStatus status = PhysicsServer3D::AREA_BODY_ADDED;
 		RID other_rid;
 		uint64_t other_instance_id = 0;
+		bool other_is_area = false;
 	};
 
 	void _call_body_queries();
@@ -100,6 +105,8 @@ private:
 			Box3DAreaImpl3D* p_area,
 			Box3DShapedObjectImpl3D* p_other,
 			PhysicsServer3D::AreaBodyStatus p_status);
+
+	void _remove_object_from_overlaps(Box3DShapedObjectImpl3D* p_object);
 
 	RID rid;
 	b3WorldId world_id = b3_nullWorldId;

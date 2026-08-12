@@ -93,6 +93,12 @@ public:
 	// Returns true the last time this object stops overlapping (i.e. exited).
 	bool remove_overlap(Box3DShapedObjectImpl3D* p_other);
 
+	// Drops every shape-pair reference for this object at once. Used when an overlapping
+	// body/area leaves the space before Box3D can emit a usable end-touch event.
+	bool remove_overlap_object(Box3DShapedObjectImpl3D* p_other);
+
+	void clear_overlaps() { overlaps.clear(); }
+
 	const HashMap<Box3DShapedObjectImpl3D*, int32_t>& get_overlaps() const { return overlaps; }
 
 protected:

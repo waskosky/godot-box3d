@@ -74,6 +74,96 @@ void Box3DSpace3D::set_default_area(Box3DAreaImpl3D* p_area) {
 	default_area = p_area;
 }
 
+void Box3DSpace3D::unregister_body(Box3DBodyImpl3D* p_body) {
+	if (!bodies.erase(p_body)) {
+		return;
+	}
+	_remove_object_from_overlaps(p_body);
+}
+
+void Box3DSpace3D::unregister_area(Box3DAreaImpl3D* p_area) {
+	if (!areas.erase(p_area)) {
+		return;
+	}
+
+	// Queue exits to the area being detached before dropping its own overlap map. Other
+	// areas that monitored it are handled by _remove_object_from_overlaps below.
+	const HashMap<Box3DShapedObjectImpl3D*, int32_t> overlaps_copy(p_area->get_overlaps());
+	for (const KeyValue<Box3DShapedObjectImpl3D*, int32_t>& entry : overlaps_copy) {
+		_queue_area_event(p_area, entry.key, PhysicsServer3D::AREA_BODY_REMOVED);
+	}
+	p_area->clear_overlaps();
+	_remove_object_from_overlaps(p_area);
+}
+
+void Box3DSpace3D::_remove_object_from_overlaps(Box3DShapedObjectImpl3D* p_object) {
+	for (Box3DAreaImpl3D* area : areas) {
+		if (area->remove_overlap_object(p_object)) {
+			_queue_area_event(area, p_object, PhysicsServer3D::AREA_BODY_REMOVED);
+		}
+	}
+}
+
+void Box3DSpace3D::remove_shape_overlaps(b3ShapeId p_shape_id) {
+	if (!b3Shape_IsValid(p_shape_id)) {
+		return;
+	}
+
+	if (b3Shape_IsSensor(p_shape_id)) {
+		const b3BodyId sensor_body_id = b3Shape_GetBody(p_shape_id);
+		auto* area = dynamic_cast<Box3DAreaImpl3D*>(
+				static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(sensor_body_id)));
+		if (area == nullptr) {
+			return;
+		}
+
+		const int capacity = b3Shape_GetSensorCapacity(p_shape_id);
+		if (capacity <= 0) {
+			return;
+		}
+		LocalVector<b3ShapeId> visitors;
+		visitors.resize(capacity);
+		const int count = b3Shape_GetSensorData(p_shape_id, visitors.ptr(), capacity);
+		for (int i = 0; i < count; i++) {
+			if (!b3Shape_IsValid(visitors[i])) {
+				continue;
+			}
+			const b3BodyId visitor_body_id = b3Shape_GetBody(visitors[i]);
+			auto* other = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(visitor_body_id));
+			if (other != nullptr && other != area && area->remove_overlap(other)) {
+				_queue_area_event(area, other, PhysicsServer3D::AREA_BODY_REMOVED);
+			}
+		}
+		return;
+	}
+
+	const b3BodyId visitor_body_id = b3Shape_GetBody(p_shape_id);
+	auto* visitor = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(visitor_body_id));
+	if (visitor == nullptr) {
+		return;
+	}
+	for (Box3DAreaImpl3D* area : areas) {
+		for (int32_t i = 0; i < area->get_shape_count(); i++) {
+			if (!area->has_shape_id(i)) {
+				continue;
+			}
+			const b3ShapeId sensor_shape_id = area->get_shape_id(i);
+			const int capacity = b3Shape_GetSensorCapacity(sensor_shape_id);
+			if (capacity <= 0) {
+				continue;
+			}
+			LocalVector<b3ShapeId> visitors;
+			visitors.resize(capacity);
+			const int count = b3Shape_GetSensorData(sensor_shape_id, visitors.ptr(), capacity);
+			for (int j = 0; j < count; j++) {
+				if (B3_ID_EQUALS(visitors[j], p_shape_id) && area->remove_overlap(visitor)) {
+					_queue_area_event(area, visitor, PhysicsServer3D::AREA_BODY_REMOVED);
+				}
+			}
+		}
+	}
+}
+
 void Box3DSpace3D::step(float p_step) {
 	last_step = p_step;
 
@@ -314,15 +404,15 @@ void Box3DSpace3D::_queue_area_event(
 	auto* other_area = dynamic_cast<Box3DAreaImpl3D*>(p_other);
 
 	PendingAreaEvent event;
+	event.area_rid = p_area->get_rid();
 	event.status = p_status;
 	event.other_rid = p_other->get_rid();
 	event.other_instance_id = p_other->get_instance_id();
+	event.other_is_area = other_area != nullptr;
 
 	if (other_body != nullptr && p_area->has_body_monitor_callback()) {
-		event.callback = p_area->get_body_monitor_callback();
 		pending_area_events.push_back(event);
 	} else if (other_area != nullptr && p_area->has_area_monitor_callback()) {
-		event.callback = p_area->get_area_monitor_callback();
 		pending_area_events.push_back(event);
 	}
 }
@@ -384,7 +474,31 @@ void Box3DSpace3D::flush_queries() {
 
 	_call_body_queries();
 
-	for (const PendingAreaEvent& event : pending_area_events) {
+	// Callbacks may detach/free more objects and enqueue follow-up exits. Iterate a copy so
+	// those mutations cannot relocate the vector underneath this loop; they run next flush.
+	const LocalVector<PendingAreaEvent> events(pending_area_events);
+	pending_area_events.clear();
+	for (const PendingAreaEvent& event : events) {
+		Box3DAreaImpl3D* area = Box3DPhysicsServer3D::get_singleton()->get_area(event.area_rid);
+		if (area == nullptr || area->get_space() != this) {
+			continue;
+		}
+		const Callable callback = event.other_is_area
+				? area->get_area_monitor_callback()
+				: area->get_body_monitor_callback();
+		if (!callback.is_valid()) {
+			continue;
+		}
+		// A previous callback in this batch may have freed the object. Its exit is still
+		// meaningful to an already-tracking Area3D, but a stale enter must not resurrect it.
+		if (event.status == PhysicsServer3D::AREA_BODY_ADDED) {
+			const bool other_exists = event.other_is_area
+					? Box3DPhysicsServer3D::get_singleton()->get_area(event.other_rid) != nullptr
+					: Box3DPhysicsServer3D::get_singleton()->get_body(event.other_rid) != nullptr;
+			if (!other_exists) {
+				continue;
+			}
+		}
 		Array arguments;
 		arguments.resize(5);
 		arguments[0] = event.status;
@@ -392,9 +506,8 @@ void Box3DSpace3D::flush_queries() {
 		arguments[2] = event.other_instance_id;
 		arguments[3] = 0;
 		arguments[4] = 0;
-		event.callback.callv(arguments);
+		callback.callv(arguments);
 	}
-	pending_area_events.clear();
 
 	flushing_queries = false;
 }
