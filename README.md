@@ -157,7 +157,7 @@ GODOT_BIN=/path/to/godot scripts/run_headless_tests.sh
 
 The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs 19 headless regression tests. It exits nonzero if a test fails or leaks a Box3D RID. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
 
-CI executes that suite with Godot 4.7 on Linux, Windows, and macOS, and separately on the minimum supported Godot 4.3. It also runs the suite against a Debug build instrumented with AddressSanitizer and UndefinedBehaviorSanitizer.
+CI executes that suite with Godot 4.7 on Linux, Windows, and macOS, and separately on the minimum supported Godot 4.3. It also runs the suite under UndefinedBehaviorSanitizer and compile/link checks a Debug build instrumented with AddressSanitizer. Stock Godot binaries use `RTLD_DEEPBIND`, so running an ASan-instrumented GDExtension requires an ASan-built Godot host.
 
 ## Contributing
 
