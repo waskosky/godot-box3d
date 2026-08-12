@@ -15,6 +15,10 @@ using namespace godot;
 namespace {
 
 Box3DPhysicsServer3D* _create_box3d_physics_server() {
+	// Godot 4.3 does not expose ProjectSettings to GDExtensions yet during the servers
+	// initialization callback. The manager invokes this factory after project settings are
+	// available, so register Box3D's settings here before the first space reads them.
+	box3d_initialize();
 	return memnew(Box3DPhysicsServer3D);
 }
 
@@ -22,8 +26,6 @@ Box3DPhysicsServer3D* _create_box3d_physics_server() {
 
 void initialize_box3d_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SERVERS) {
-		box3d_initialize();
-
 		GDREGISTER_VIRTUAL_CLASS(Box3DPhysicsDirectBodyState3D);
 		GDREGISTER_VIRTUAL_CLASS(Box3DPhysicsDirectSpaceState3D);
 		GDREGISTER_VIRTUAL_CLASS(Box3DPhysicsServer3D);

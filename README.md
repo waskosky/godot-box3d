@@ -52,7 +52,7 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - Per-pair collision exceptions
 - Joints: pin, hinge, and slider (pin anchors can be moved after creation)
 - Multithreaded solver: the worker count auto-detects physical cores and can be overridden with the `physics/box3d/worker_count` project setting (results are deterministic across worker counts)
-- A test project with a demo hub, a deterministic benchmark, and a headless regression suite
+- A test project with a demo hub, a deterministic benchmark, and 21 headless regression tests
 
 ## What's left to do
 
@@ -111,7 +111,7 @@ Reproduce it by opening the demo project, picking a backend on the main menu, an
 
 ## Requirements
 
-- Godot 4.3 or newer (the test project targets 4.7)
+- Godot 4.3 or newer. CI runs the physics suite on both 4.3 and the current test target, 4.7.
 
 ## Installation
 
@@ -163,7 +163,9 @@ cmake --build build-win --parallel
 GODOT_BIN=/path/to/godot scripts/run_headless_tests.sh
 ```
 
-The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs the headless regression suite. It exits nonzero if a test fails or leaks a Box3D RID. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
+The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs 21 headless regression tests. It exits nonzero if a test fails or leaks a Box3D RID. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
+
+CI executes that suite with Godot 4.7 on Linux, Windows, and macOS, and separately on the minimum supported Godot 4.3. It also runs the suite against a Debug build instrumented with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Contributing
 
