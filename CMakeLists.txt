@@ -19,6 +19,10 @@ set(BOX3D_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(box3d)
 
+# Box3D is a static library embedded in the GDExtension. Keep it relocatable so Debug builds
+# instrumented by sanitizers can still be linked into the shared library on ELF platforms.
+set_target_properties(box3d PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # --- godot-cpp (fetched via ExternalProject_Add) ---
 include(cmake/GodotBox3DExternalGodotCpp.cmake)
 
@@ -41,6 +45,12 @@ target_compile_features(godot-box3d PRIVATE cxx_std_17)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 	target_compile_options(godot-box3d PRIVATE -Wall)
+endif()
+
+# Native MinGW builds otherwise depend on compiler runtime DLLs that are not part of a Godot
+# project. Match the cross-compilation toolchain and keep the distributed extension standalone.
+if(MINGW)
+	target_link_options(godot-box3d PRIVATE -static-libgcc -static-libstdc++ -static)
 endif()
 
 # The .gdextension expects "godot-box3d.dll" on Windows but "libgodot-box3d.so/.dylib"
