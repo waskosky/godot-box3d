@@ -75,9 +75,11 @@ write_summary() {
 				printf '| FAIL | `%s` |\n' "$test_script"
 			done
 		fi
-		for test_script in "${passed_tests[@]}"; do
-			printf '| pass | `%s` |\n' "$test_script"
-		done
+		if (( ${#passed_tests[@]} > 0 )); then
+			for test_script in "${passed_tests[@]}"; do
+				printf '| pass | `%s` |\n' "$test_script"
+			done
+		fi
 	} > "$TEST_SUMMARY"
 }
 
