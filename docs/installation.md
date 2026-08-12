@@ -39,10 +39,10 @@ The supported no-thread Web profile always uses one worker, regardless of this s
 |---|---|
 | Linux x86_64 | Tested |
 | Windows x86_64 | Tested |
-| macOS arm64 | Compiles, untested |
+| macOS arm64 | Headless suite runs in CI; not notarized |
 | macOS x86_64 | Not built |
 
-macOS is a work in progress. Builds are Apple Silicon only and are not notarized, so Intel Macs cannot load the library and Gatekeeper will need convincing on any Mac.
+macOS distribution is a work in progress. Apple Silicon builds run the headless suite in CI, but they are not yet universal or notarized. Intel Macs cannot load the current arm64 library, and Gatekeeper may block unsigned local builds.
 
 ## Verifying it loaded
 
