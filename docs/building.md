@@ -52,6 +52,8 @@ The runner builds the extension, registers it, checks the Box3D backend actually
 
 CI runs the suite with Godot 4.7 on Linux, Windows, and macOS, plus a Linux compatibility run on the minimum supported Godot 4.3. It also executes the suite under UndefinedBehaviorSanitizer and compile/link checks a Debug build instrumented with AddressSanitizer. Runtime ASan requires an ASan-built Godot host because stock Linux binaries load extensions with `RTLD_DEEPBIND`.
 
+The UBSan job retains full coverage for the C++ extension. Its Box3D C build excludes only the alignment category because Box3D's x86 SIMD loader deliberately uses an unaligned-capable `movsd` instruction through an intrinsic whose pointer type triggers GCC's alignment instrumentation. The regular native and Web jobs continue to exercise that production SIMD path.
+
 The runner registers only Box3D. A second GDExtension built against a different Godot version can abort the process before Box3D registers, which would fail every test for an unrelated reason.
 
 Tests live in `test_project/tests/`, one file per behavior, each extending `SceneTree`. Assertions were validated against stock Godot Physics first, so they encode real engine behavior rather than whatever this backend happened to do.
