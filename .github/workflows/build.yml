@@ -46,10 +46,21 @@ jobs:
         run: choco install ninja
 
       - name: Configure
+        if: runner.os != 'macOS'
         run: cmake -B build -G "${{ matrix.cmake-generator }}"
+
+      - name: Configure universal macOS build
+        if: runner.os == 'macOS'
+        run: >-
+          cmake -B build -G "${{ matrix.cmake-generator }}"
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
       - name: Build
         run: cmake --build build --parallel
+
+      - name: Verify universal macOS binary
+        if: runner.os == 'macOS'
+        run: lipo bin/libgodot-box3d.dylib -verify_arch arm64 x86_64
 
       - name: Install Godot
         shell: bash

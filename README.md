@@ -29,7 +29,7 @@ New tech is cool and Godot is great. That's most of it. This is my first time do
 | Joints | 3 (pin, hinge, slider) | 8 (adds ball, fixed, motor, wheel, parallel, distance) |
 | Vehicles | `VehicleBody3D` (raycast) | `Box3DWheelJoint` (real constraint) |
 | Heightfields | Yes | No |
-| Platforms | Linux, Windows, Web (macOS arm64 runtime-tested) | + Android, web |
+| Platforms | Linux, Windows, Web (macOS universal, experimental) | + Android, web |
 | Box3D-only features | Not reachable | Explosions, gyroscopic torque, solver profiling, async stepping |
 
 box3d-godot exposes more of Box3D. This project keeps your project working.
@@ -61,8 +61,8 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - `Generic6DOFJoint3D` (Box3D has no per-axis lock/limit/motor constraint, so there is no faithful mapping; use `PinJoint3D`, `HingeJoint3D`, or `SliderJoint3D` instead)
 - `SoftBody3D`
 - Solver profiling
-- macOS distribution: universal binaries and notarization (arm64 is runtime-tested in CI)
-- More platforms and architectures (currently Linux, Windows, and Web)
+- macOS support: notarization and runtime validation of both architecture slices
+- More platforms and architectures (currently Linux, Windows, and Web; macOS is experimental)
 - Performance benchmarking and tuning
 
 ## Behavior differences
@@ -131,7 +131,7 @@ Then set **Project Settings → Physics → 3D → Physics Engine** to `Box3D Ph
 
 The solver is multithreaded. By default it uses one worker per physical core (efficiency cores and hyperthreads are excluded, since they slow the solver's synchronised stages down). To override it, set `physics/box3d/worker_count` (visible with Advanced Settings on) to an explicit count; `0` means auto. This also needs a restart, and simulation results are identical at any worker count. The supported no-thread Web profile always uses one worker.
 
-> **macOS distribution is a work in progress.** Apple Silicon builds run the headless suite in CI, but release artifacts are not yet universal or notarized. Intel Macs cannot load the current arm64 library, and Gatekeeper may block unsigned local builds.
+> **macOS is a work in progress.** Release artifacts contain a universal arm64/x86_64 library and run the headless physics suite on the GitHub-hosted macOS architecture. The library is not notarized, and the other architecture slice is compile-checked only, so Gatekeeper may block it and macOS should still be treated as experimental.
 
 ## Building
 

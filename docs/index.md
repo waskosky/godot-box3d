@@ -43,7 +43,7 @@ Box3D is worth trying because of where it came from. [Erin Catto](https://x.com/
 - `Generic6DOFJoint3D` (Box3D has no per-axis lock/limit/motor constraint, so there is no faithful mapping)
 - `SoftBody3D`
 - Solver profiling
-- macOS universal binaries and notarization
+- macOS notarization and runtime validation of both architecture slices
 
 ## Benchmark
 
