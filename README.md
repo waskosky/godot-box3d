@@ -52,7 +52,7 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - Per-pair collision exceptions
 - Joints: pin, hinge, and slider (pin anchors can be moved after creation)
 - Multithreaded solver: the worker count auto-detects physical cores and can be overridden with the `physics/box3d/worker_count` project setting (results are deterministic across worker counts)
-- A test project with a demo hub, a deterministic benchmark, and 23 headless regression tests
+- A test project with a demo hub, a deterministic benchmark, and 24 headless regression tests
 
 ## What's left to do
 
@@ -163,7 +163,7 @@ cmake --build build-win --parallel
 GODOT_BIN=/path/to/godot scripts/run_headless_tests.sh
 ```
 
-The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs 23 headless regression tests. It exits nonzero if a test fails or leaks a Box3D RID. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
+The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs 24 headless regression tests. It exits nonzero if a test fails or leaks a Box3D RID. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
 
 CI executes that suite with Godot 4.7 on Linux, Windows, and macOS, and separately on the minimum supported Godot 4.3. It also runs the suite under UndefinedBehaviorSanitizer and compile/link checks a Debug build instrumented with AddressSanitizer. Stock Godot binaries use `RTLD_DEEPBIND`, so running an ASan-instrumented GDExtension requires an ASan-built Godot host.
 
