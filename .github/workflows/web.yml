@@ -3,7 +3,7 @@ name: Web build and smoke
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, integration/next]
   pull_request:
     branches: [main]
 
