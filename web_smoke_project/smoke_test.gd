@@ -30,13 +30,13 @@ func _create_status_ui() -> void:
 
     var panel := ColorRect.new()
     panel.position = Vector2(16, 16)
-    panel.size = Vector2(700, 250)
+    panel.size = Vector2(700, 310)
     panel.color = Color(0.02, 0.02, 0.02, 0.82)
     layer.add_child(panel)
 
     _status_label = Label.new()
     _status_label.position = Vector2(16, 12)
-    _status_label.size = Vector2(668, 226)
+    _status_label.size = Vector2(668, 286)
     _status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     panel.add_child(_status_label)
 
@@ -152,6 +152,38 @@ func _run_checks() -> void:
     for _frame in 180:
         await get_tree().physics_frame
 
+    var character := CharacterBody3D.new()
+    character.position = Vector3(-3.0, 1.6, 0.0)
+    var body_collision := CollisionShape3D.new()
+    var body_shape := CapsuleShape3D.new()
+    body_shape.radius = 0.25
+    body_shape.height = 0.5
+    body_collision.shape = body_shape
+    character.add_child(body_collision)
+    var ray_collision := CollisionShape3D.new()
+    ray_collision.rotation.x = PI / 2.0
+    var ray_shape := SeparationRayShape3D.new()
+    ray_shape.length = 1.5
+    ray_collision.shape = ray_shape
+    character.add_child(ray_collision)
+    add_child(character)
+    await get_tree().physics_frame
+
+    var motion_parameters := PhysicsTestMotionParameters3D.new()
+    motion_parameters.from = character.global_transform
+    motion_parameters.motion = Vector3(0.0, -0.25, 0.0)
+    motion_parameters.margin = 0.001
+    motion_parameters.collide_separation_ray = true
+    var ray_result := PhysicsTestMotionResult3D.new()
+    var ray_hit := PhysicsServer3D.body_test_motion(character.get_rid(), motion_parameters, ray_result)
+    var ray_ok := (
+        ray_hit
+        and ray_result.get_collision_count() == 1
+        and ray_result.get_collision_local_shape() == 1
+        and ray_result.get_collision_normal().dot(Vector3.UP) > 0.99
+        and absf(ray_result.get_collision_unsafe_fraction() - 0.4) < 0.03
+    )
+
     var failures: Array[String] = []
     var requested_backend: String = ProjectSettings.get_setting("physics/3d/physics_engine", "")
     if requested_backend != EXPECTED_ENGINE:
@@ -164,10 +196,13 @@ func _run_checks() -> void:
         failures.append("Area body_entered signal did not fire")
     if absf(_door.rotation.z - _initial_door_rotation) < 0.02:
         failures.append("Hinge-connected body did not rotate")
+    if not ray_ok:
+        failures.append("SeparationRayShape3D motion query did not snap to the floor")
 
     _append_status("Body Y after 180 frames: %.3f" % _body.global_position.y)
     _append_status("Area event received: %s" % _area_entered)
     _append_status("Door rotation delta: %.3f" % absf(_door.rotation.z - _initial_door_rotation))
+    _append_status("Separation ray motion query: %s" % ("PASS" if ray_ok else "FAIL"))
 
     if failures.is_empty():
         _append_status("RESULT: PASS")

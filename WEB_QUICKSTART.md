@@ -4,7 +4,7 @@ Godot Web exports can load `godot-box3d` when the extension side module and the 
 
 ## Fastest route: use a prebuilt Web bundle
 
-Install the normal desktop addon from the latest release first. Then download the `godot-box3d-web-release` artifact from a successful **Web build and smoke** workflow run, or use the same ZIP attached to a project release when available.
+Install the normal desktop addon from the latest release first. For a tagged version, download its versioned Web ZIP and `.sha256` checksum from [Releases](https://github.com/bearlikelion/godot-box3d/releases). For development snapshots, download the `godot-box3d-web-release` artifact from a successful **Web build and smoke** workflow run.
 
 The archive contains:
 
@@ -17,6 +17,8 @@ godot-box3d-web/
     ├── godot-box3d-web-debug.zip
     └── godot-box3d-web-release.zip
 ```
+
+`BUILD_MANIFEST.json` records the exact source revision, dependency pins, binaries, templates, and their hashes. The adjacent release checksum verifies the complete downloaded ZIP.
 
 Merge `addons/godot-box3d` into the existing addon in the Godot project. Keep the desktop binaries from the normal release and add the new `bin/web` directory:
 
@@ -106,7 +108,7 @@ For the automated browser assertion:
   --screenshot build/web-smoke-release.png
 ```
 
-The test passes only when the extension registers, Box3D is the requested backend, a rigid body settles on the floor, an area callback fires, and a hinge moves.
+The test passes only when the extension registers, Box3D is the requested backend, a rigid body settles on the floor, an area callback fires, a hinge moves, and a `SeparationRayShape3D` motion query snaps to the floor.
 The Web workflow runs this release-export smoke test in headless Chromium before it packages the bundle.
 
 ## Important compatibility rules

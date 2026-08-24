@@ -102,6 +102,7 @@ def main() -> int:
     required = {
         "backend": any("Requested backend: Box3D Physics" in line for line in console_lines),
         "extension": any("Extension class registered: true" in line for line in console_lines),
+        "separation_ray": any("Separation ray motion query: PASS" in line for line in console_lines),
         "physics": "RESULT: PASS" in console_lines,
     }
     result = {
