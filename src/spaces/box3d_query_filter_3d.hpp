@@ -20,6 +20,7 @@ struct Box3DQueryFilter3D {
 	const PhysicsDirectSpaceState3DExtension* direct_state = nullptr;
 	bool collide_with_bodies = true;
 	bool collide_with_areas = false;
+	bool pick_ray = false;
 
 	Box3DQueryFilter3D() = default;
 
