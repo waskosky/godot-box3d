@@ -18,8 +18,10 @@ func _run() -> void:
 	root.physics_object_picking_sort = true
 	root.physics_object_picking_first_only = true
 	# Headless windows never receive an OS-level mouse-enter notification, but Viewport
-	# intentionally suppresses picking while the pointer is outside its bounds.
-	root.notify_mouse_entered()
+	# intentionally suppresses picking while the pointer is outside its bounds. Godot 4.3
+	# predates the public notification method and treats the root window as entered already.
+	if root.has_method("notify_mouse_entered"):
+		root.call("notify_mouse_entered")
 
 	var camera := Camera3D.new()
 	camera.name = "PickCamera"
