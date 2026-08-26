@@ -121,3 +121,22 @@ The Web workflow runs this release-export smoke test in headless Chromium before
 - The default build uses WebAssembly SIMD128. Use `BOX3D_DISABLE_SIMD=1 scripts/build_web.sh` only as a diagnostic fallback.
 
 The dependency versions used for the extension and matching templates are recorded in [`dependencies.lock`](dependencies.lock).
+
+## Embedded Web archive for worker-main hosts
+
+The normal supported package above remains the dynamic, single-threaded route.
+An embedding host that builds its own Godot Web template can instead produce
+thread-capable static archives:
+
+```bash
+MAX_JOBS=4 scripts/build_web_static.sh
+```
+
+This creates one Box3D binding archive and its matching godot-cpp archive under
+`bin/web/static/`. They are inputs for a host-owned Godot custom module; they are
+not a complete export template and must not be mixed with another Godot API,
+Box3D, or Emscripten tuple. The host is responsible for registering
+`godot_box3d_main` through Godot's function-backed GDExtension loader, linking
+with `dlink_enabled=no`, and validating its own `PROXY_TO_PTHREAD`,
+cross-origin-isolation, physics-parity, and browser/device matrix. Keep the
+ordinary dynamic/no-thread bundle as the development and rollback path.

@@ -14,6 +14,10 @@ WEB_LIBRARIES = {
     "web.wasm32.single.debug": "./bin/web/libgodot-box3d.web.template_debug.wasm32.nothreads.wasm",
     "web.wasm32.single.release": "./bin/web/libgodot-box3d.web.template_release.wasm32.nothreads.wasm",
 }
+STATIC_WEB_ARCHIVES = {
+    "box3d": "bin/web/static/libgodot-box3d-static.web.template_release.wasm32.a",
+    "godot-cpp": "bin/web/static/libgodot-cpp.web.template_release.wasm32.a",
+}
 PINNED_REFS = {
     "BOX3D_REF": "3fc20f5b453ba9e14cdf54ecafa87a2a4bcdf53c",
     "GODOT_CPP_REF": "fbbf9ec4efd8f1055d00edb8d926eef8ba4c2cce",
@@ -26,6 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--platform", action="append", choices=("web",))
     parser.add_argument("--require-binaries", action="store_true")
+    parser.add_argument("--require-static-binaries", action="store_true")
     parser.add_argument("--require-dependencies", action="store_true")
     return parser.parse_args()
 
@@ -121,6 +126,9 @@ def main() -> int:
             'local_env["threads"] = False',
             'box3d_env.AppendUnique(CCFLAGS=["-msimd128", "-msse2"])',
             'SConscript("godot-cpp/SConstruct"',
+            'GODOT_BOX3D_LINK_MODE',
+            'LINK_MODE == "static"',
+            'env.StaticLibrary(',
         ):
             if fragment not in sconstruct:
                 errors.append(f"SConstruct is missing: {fragment}")
@@ -130,6 +138,7 @@ def main() -> int:
         "WEB_QUICKSTART.md",
         ".github/workflows/web.yml",
         "scripts/build_web.sh",
+        "scripts/build_web_static.sh",
         "scripts/build_web_templates.sh",
         "scripts/quickstart_web.sh",
         "scripts/run_web_smoke.py",
@@ -161,6 +170,16 @@ def main() -> int:
             if header != b"\x00asm\x01\x00\x00\x00":
                 errors.append(f"Invalid WebAssembly binary: {binary.relative_to(REPO_ROOT)}")
         checks.append("Debug and release WebAssembly side modules")
+
+    if args.require_static_binaries:
+        for label, relative in STATIC_WEB_ARCHIVES.items():
+            archive = REPO_ROOT / relative
+            if not archive.is_file():
+                errors.append(f"Missing {label} static Web archive: {relative}")
+                continue
+            if archive.read_bytes()[:7] != b"!<arch>":
+                errors.append(f"Invalid {label} static Web archive: {relative}")
+        checks.append("Release static Web archives")
 
     for check in checks:
         print(f"PASS: {check}")

@@ -13,6 +13,11 @@ from pathlib import Path
 
 LIBRARY_NAME = "godot-box3d"
 TEST_ADDON_DIR = "test_project/addons/godot-box3d"
+LINK_MODE = os.environ.get("GODOT_BOX3D_LINK_MODE", "dynamic").strip().lower()
+
+if LINK_MODE not in ("dynamic", "static"):
+    print("ERROR: GODOT_BOX3D_LINK_MODE must be 'dynamic' or 'static'.")
+    Exit(1)
 
 
 def _is_nonempty_directory(path):
@@ -42,6 +47,14 @@ def _compile_shared_objects(build_env, sources, source_root, group, variant):
     for source in sources:
         target = _object_target(group, source, source_root, variant)
         objects.extend(build_env.SharedObject(target=target, source=source))
+    return objects
+
+
+def _compile_static_objects(build_env, sources, source_root, group, variant):
+    objects = []
+    for source in sources:
+        target = _object_target(group, source, source_root, variant)
+        objects.extend(build_env.Object(target=target, source=source))
     return objects
 
 
@@ -81,6 +94,9 @@ if ARGUMENTS.get("platform") == "web" and "threads" not in ARGUMENTS:
 env = SConscript("godot-cpp/SConstruct", {"env": local_env, "customs": []})
 
 platform_name = env["platform"]
+if LINK_MODE == "static" and platform_name != "web":
+    print("ERROR: The embedded static archive is currently supported only for Web builds.")
+    Exit(1)
 is_ios_simulator = platform_name == "ios" and bool(env.get("ios_simulator", False))
 variant = "{}-{}-{}{}{}".format(
     platform_name,
@@ -89,6 +105,8 @@ variant = "{}-{}-{}{}{}".format(
     "-simulator" if is_ios_simulator else "",
     "-nothreads" if not env["threads"] else "",
 )
+if LINK_MODE == "static":
+    variant += "-static"
 
 # The pinned Godot 4.3 iOS tool applies its deployment target to compilation
 # but not linking. New Xcode versions then stamp the dylib with the SDK version
@@ -151,8 +169,9 @@ if not box3d_sources:
     Exit(1)
 
 objects = []
-objects.extend(_compile_shared_objects(extension_env, extension_sources, "src", "extension", variant))
-objects.extend(_compile_shared_objects(box3d_env, box3d_sources, "box3d/src", "box3d", variant))
+compile_objects = _compile_static_objects if LINK_MODE == "static" else _compile_shared_objects
+objects.extend(compile_objects(extension_env, extension_sources, "src", "extension", variant))
+objects.extend(compile_objects(box3d_env, box3d_sources, "box3d/src", "box3d", variant))
 
 # Match the naming convention used by godot-cpp's official template. Removing
 # .universal keeps the macOS filename architecture-neutral while preserving the
@@ -165,11 +184,29 @@ library_filename = "{}{}{}{}".format(
     env.subst("$SHLIBSUFFIX"),
 )
 
-library = env.SharedLibrary(
-    target=os.path.join("bin", platform_name, library_filename),
-    source=objects,
-)
+if LINK_MODE == "static":
+    static_output_dir = os.path.join("bin", platform_name, "static")
+    static_filename = "libgodot-box3d-static{}{}".format(suffix, env.subst("$LIBSUFFIX"))
+    library = env.StaticLibrary(
+        target=os.path.join(static_output_dir, static_filename),
+        source=objects,
+    )
+    godot_cpp_libraries = [
+        candidate
+        for candidate in env["LIBS"]
+        if os.path.basename(str(candidate)).startswith("libgodot-cpp")
+    ]
+    if len(godot_cpp_libraries) != 1:
+        print("ERROR: Expected exactly one godot-cpp static library dependency.")
+        Exit(1)
+    godot_cpp_copy = env.Install(static_output_dir, godot_cpp_libraries[0])
+    Default(library, godot_cpp_copy)
+else:
+    library = env.SharedLibrary(
+        target=os.path.join("bin", platform_name, library_filename),
+        source=objects,
+    )
 
-test_copy = env.Install(os.path.join(TEST_ADDON_DIR, "bin", platform_name), library)
+    test_copy = env.Install(os.path.join(TEST_ADDON_DIR, "bin", platform_name), library)
 
-Default(library, test_copy)
+    Default(library, test_copy)
