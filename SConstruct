@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Primary cross-platform build for godot-box3d.
+"""Web GDExtension build for godot-box3d.
 
 The project intentionally compiles Box3D directly into the GDExtension shared
-library. This avoids shipping a second native library and keeps Android, iOS,
-and Web packaging aligned with Godot's official godot-cpp template.
+library. This avoids shipping a second WebAssembly module and follows Godot's
+official godot-cpp template.
 """
 
 import os
@@ -58,8 +58,8 @@ if not _is_nonempty_directory("box3d"):
 local_env = Environment(tools=["default"], PLATFORM="")
 
 # Generate only the Godot engine classes required by this physics backend and
-# their transitive dependencies. This substantially reduces build time and
-# binary size on Android, iOS, and Web. Callers can override the profile with
+# their transitive dependencies. This substantially reduces Web build time and
+# binary size. Callers can override the profile with
 # build_profile=<path> when developing new wrapper features.
 if "build_profile" not in ARGUMENTS:
     local_env["build_profile"] = os.path.abspath("godot_cpp_build_profile.json")
@@ -67,8 +67,8 @@ if "build_profile" not in ARGUMENTS:
 # godot-cpp writes generated built-in wrappers into one shared gen/ directory.
 # Their opaque sizes depend on the target pointer width, but target width is not
 # part of the generated-file dependency signature in the pinned 4.3 bindings.
-# Always regenerate before a platform build so a preceding wasm32 build cannot
-# leak 32-bit wrappers into Android, iOS, or desktop libraries (or vice versa).
+# Always regenerate before a platform build so wrappers from a preceding host
+# build cannot leak into the wasm32 library (or vice versa).
 local_env["generate_bindings"] = True
 
 # The recommended browser configuration is deliberately single-threaded. It
@@ -81,25 +81,12 @@ if ARGUMENTS.get("platform") == "web" and "threads" not in ARGUMENTS:
 env = SConscript("godot-cpp/SConstruct", {"env": local_env, "customs": []})
 
 platform_name = env["platform"]
-is_ios_simulator = platform_name == "ios" and bool(env.get("ios_simulator", False))
-variant = "{}-{}-{}{}{}".format(
+variant = "{}-{}-{}{}".format(
     platform_name,
     env["target"],
     env["arch"],
-    "-simulator" if is_ios_simulator else "",
     "-nothreads" if not env["threads"] else "",
 )
-
-# The pinned Godot 4.3 iOS tool applies its deployment target to compilation
-# but not linking. New Xcode versions then stamp the dylib with the SDK version
-# as its minimum OS. Keep the older API-compatible bindings while applying the
-# same target to the final link, matching current godot-cpp behavior.
-if platform_name == "ios":
-    ios_min_version = str(env["ios_min_version"])
-    deployment_flag = (
-        "-mios-simulator-version-min=" if is_ios_simulator else "-miphoneos-version-min="
-    ) + ios_min_version
-    env.AppendUnique(LINKFLAGS=[deployment_flag])
 
 common_include_dirs = [
     env.Dir("#src"),
@@ -135,9 +122,9 @@ if disable_simd:
 elif platform_name == "web":
     box3d_env.AppendUnique(CCFLAGS=["-msimd128", "-msse2"])
 
-# Box3D uses libm on Unix-like targets. Apple and Emscripten provide these
-# symbols through their system runtimes; Linux and Android use libm explicitly.
-if platform_name in ("linux", "android"):
+# Box3D uses libm on Unix-like targets. Emscripten provides these symbols
+# through its system runtime; native Linux builds need libm explicitly.
+if platform_name == "linux":
     env.AppendUnique(LIBS=["m"])
 
 extension_sources = _recursive_sources("src", ".cpp")
