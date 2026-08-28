@@ -4,7 +4,7 @@ Godot Web exports can load `godot-box3d` when the extension side module and the 
 
 ## Fastest route: use a prebuilt Web bundle
 
-Install the normal desktop addon from the latest release first. Then download the `godot-box3d-web-release` artifact from a successful **Web build and smoke** workflow run, or use the same ZIP attached to a project release when available.
+Install the normal desktop addon from the latest release first. For a tagged version, download its versioned Web ZIP and `.sha256` checksum from [Releases](https://github.com/bearlikelion/godot-box3d/releases). For development snapshots, download the `godot-box3d-web-release` artifact from a successful **Web build and smoke** workflow run.
 
 The archive contains:
 
@@ -17,6 +17,8 @@ godot-box3d-web/
     ├── godot-box3d-web-debug.zip
     └── godot-box3d-web-release.zip
 ```
+
+`BUILD_MANIFEST.json` records the exact source revision, dependency pins, binaries, templates, and their hashes. The adjacent release checksum verifies the complete downloaded ZIP.
 
 Merge `addons/godot-box3d` into the existing addon in the Godot project. Keep the desktop binaries from the normal release and add the new `bin/web` directory:
 
