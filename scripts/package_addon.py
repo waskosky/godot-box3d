@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 import zipfile
 from datetime import datetime, timezone
@@ -69,6 +70,39 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def git_output(*args: str) -> str | None:
+    result = subprocess.run(
+        ("git", *args),
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    value = result.stdout.strip()
+    return value if result.returncode == 0 and value else None
+
+
+def source_provenance() -> dict[str, str | bool | None]:
+    repository = None
+    if os.environ.get("GITHUB_SERVER_URL") and os.environ.get("GITHUB_REPOSITORY"):
+        repository = f'{os.environ["GITHUB_SERVER_URL"]}/{os.environ["GITHUB_REPOSITORY"]}'
+    if repository is None:
+        repository = git_output("remote", "get-url", "origin")
+
+    commit = os.environ.get("GITHUB_SHA") or git_output("rev-parse", "HEAD")
+    ref = os.environ.get("GITHUB_REF_NAME") or git_output("branch", "--show-current")
+    tracked_dirty = (
+        subprocess.run(("git", "diff", "--quiet"), cwd=REPO_ROOT, check=False).returncode != 0
+        or subprocess.run(("git", "diff", "--cached", "--quiet"), cwd=REPO_ROOT, check=False).returncode != 0
+    )
+    return {
+        "repository": repository,
+        "ref": ref,
+        "commit": commit,
+        "tracked_worktree_dirty": tracked_dirty,
+    }
 
 
 def copy_required(
@@ -206,6 +240,7 @@ def main() -> int:
             "platform_groups": selected,
             "complete": not missing,
             "missing": missing,
+            "source": source_provenance(),
             "dependencies": {
                 "godot_cpp_ref": lock_values.get("GODOT_CPP_REF"),
                 "box3d_ref": lock_values.get("BOX3D_REF"),
