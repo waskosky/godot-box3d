@@ -31,6 +31,12 @@ func _run() -> void:
 	_add_sphere(body, Vector3.ZERO, false)
 	root.add_child(body)
 
+	var mover := CharacterBody3D.new()
+	mover.position = Vector3(4, 3, 0)
+	_add_sphere(mover, Vector3(-8, 0, 0), true)
+	_add_sphere(mover, Vector3.ZERO, false)
+	root.add_child(mover)
+
 	await physics_frame
 	await physics_frame
 
@@ -39,6 +45,7 @@ func _run() -> void:
 		Vector3(4, 3, 0),
 		Vector3(4, -3, 0),
 	)
+	ray_query.exclude = [mover.get_rid()]
 	var ray_hit: Dictionary = space_state.intersect_ray(ray_query)
 	_check(ray_hit.get("rid") == query_target.get_rid(), "ray query hits the multi-shape body")
 	_check(ray_hit.get("shape", -1) == 1, "ray query reports the active second shape")
@@ -57,6 +64,19 @@ func _run() -> void:
 	var shape_hit: Dictionary = _find_rid(space_state.intersect_shape(shape_query), query_target.get_rid())
 	_check(not shape_hit.is_empty(), "shape query hits the multi-shape body")
 	_check(shape_hit.get("shape", -1) == 1, "shape query reports the active second shape")
+
+	var motion_parameters := PhysicsTestMotionParameters3D.new()
+	motion_parameters.from = mover.global_transform
+	motion_parameters.motion = Vector3(0, -4, 0)
+	var motion_result := PhysicsTestMotionResult3D.new()
+	var motion_hit := PhysicsServer3D.body_test_motion(mover.get_rid(), motion_parameters, motion_result)
+	_check(motion_hit, "motion query considers the active second local shape")
+	if motion_result.get_collision_count() > 0:
+		_check(motion_result.get_collision_local_shape() == 1, "motion reports the active second local shape")
+		_check(motion_result.get_collider_rid() == query_target.get_rid(), "motion hits the multi-shape target")
+		_check(motion_result.get_collider_shape() == 1, "motion reports the active second collider shape")
+	else:
+		_check(false, "motion query reports a collision")
 
 	for frame in 180:
 		await physics_frame
