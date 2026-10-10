@@ -6,6 +6,9 @@ var _body: RigidBody3D
 var _area_entered := false
 var _door: RigidBody3D
 var _initial_door_rotation := 0.0
+var _characters: Array[CharacterBody3D] = []
+var _loads: Array[RigidBody3D] = []
+var _character_support_ok := true
 var _status_label: Label
 var _result_lines: Array[String] = []
 
@@ -21,7 +24,40 @@ func _ready() -> void:
     _create_ground()
     _create_falling_body_and_area()
     _create_hinge_door()
+    _create_character_supports()
     _run_checks()
+
+
+func _box_collision(size: Vector3) -> CollisionShape3D:
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = size
+    collision.shape = shape
+    return collision
+
+
+func _create_character_supports() -> void:
+    for index in 2:
+        var character := CharacterBody3D.new()
+        character.position = Vector3(-4.0 + index * 7.0, 0.5, 3.0)
+        character.add_child(_box_collision(Vector3(2, 1, 2)))
+        add_child(character)
+        _characters.append(character)
+
+        var load_body := RigidBody3D.new()
+        load_body.position = character.position + Vector3(0, 1.3, 0)
+        load_body.add_child(_box_collision(Vector3(0.4, 0.4, 0.4)))
+        add_child(load_body)
+        _loads.append(load_body)
+
+
+func _physics_process(_delta: float) -> void:
+    for index in _characters.size():
+        var character := _characters[index]
+        character.velocity = Vector3(index * 0.15, -0.5, 0)
+        character.move_and_slide()
+        if absf(character.position.y - 0.5) > 0.15:
+            _character_support_ok = false
 
 
 func _create_status_ui() -> void:
@@ -198,11 +234,19 @@ func _run_checks() -> void:
         failures.append("Hinge-connected body did not rotate")
     if not ray_ok:
         failures.append("SeparationRayShape3D motion query did not snap to the floor")
+    for index in _characters.size():
+        if absf(_loads[index].position.y - (_characters[index].position.y + 0.7)) > 0.06:
+            _character_support_ok = false
+        if absf(_loads[index].position.x - _characters[index].position.x) > 0.8:
+            _character_support_ok = false
+    if not _character_support_ok:
+        failures.append("A rigid load lost support or drove a character into the floor")
 
     _append_status("Body Y after 180 frames: %.3f" % _body.global_position.y)
     _append_status("Area event received: %s" % _area_entered)
     _append_status("Door rotation delta: %.3f" % absf(_door.rotation.z - _initial_door_rotation))
     _append_status("Separation ray motion query: %s" % ("PASS" if ray_ok else "FAIL"))
+    _append_status("Idle/moving character rigid-load support: %s" % ("PASS" if _character_support_ok else "FAIL"))
 
     if failures.is_empty():
         _append_status("RESULT: PASS")

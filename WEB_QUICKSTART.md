@@ -108,7 +108,7 @@ For the automated browser assertion:
   --screenshot build/web-smoke-release.png
 ```
 
-The test passes only when the extension registers, Box3D is the requested backend, a rigid body settles on the floor, an area callback fires, a hinge moves, and a `SeparationRayShape3D` motion query snaps to the floor.
+The test passes only when the extension registers, Box3D is the requested backend, a rigid body settles on the floor, an area callback fires, a hinge moves, a `SeparationRayShape3D` motion query snaps to the floor, and resting rigid loads remain supported by idle and moving characters.
 The Web workflow runs this release-export smoke test in headless Chromium before it packages the bundle.
 
 ## Important compatibility rules
