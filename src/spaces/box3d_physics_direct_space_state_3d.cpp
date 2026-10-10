@@ -258,6 +258,7 @@ b3AABB exact_shape_aabb(b3ShapeId p_shape_id) {
 
 struct RecoveryContext {
 	const Box3DQueryFilter3D* filter = nullptr;
+	bool dynamic_bodies = false;
 	b3AABB query_aabb{};
 	Vector3 preferred_motion;
 	Vector3* accumulated_push = nullptr;
@@ -271,6 +272,10 @@ bool recovery_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	const b3BodyId body_id = b3Shape_GetBody(p_shape_id);
 	Box3DShapedObjectImpl3D* object = nullptr;
 	if (!should_report(b3Body_GetUserData(body_id), *ctx->filter, object)) {
+		return true;
+	}
+
+	if ((b3Body_GetType(body_id) == b3_dynamicBody) != ctx->dynamic_bodies) {
 		return true;
 	}
 
@@ -646,111 +651,123 @@ bool Box3DPhysicsDirectSpaceState3D::test_body_motion(
 	bool found_supported_shape = false;
 	bool recovered = false;
 
-	// Resolve initial overlap before casting. This is required for CharacterBody3D,
-	// which normally begins each frame touching or slightly embedded in the floor.
+	// Resolve dynamic overlaps first, then immovable geometry. Applying opposing floor
+	// and rigid-body pushes together makes a resting load drive a character through the
+	// floor; ending each attempt with static/kinematic recovery preserves that boundary.
 	for (int32_t attempt = 0; attempt < 4; attempt++) {
-		Vector3 accumulated_push;
-		int32_t push_count = 0;
+		bool pushed = false;
+		for (int32_t pass = 0; pass < 2; pass++) {
+			Vector3 accumulated_push;
+			int32_t push_count = 0;
 
-		for (int32_t i = 0; i < p_body.get_shape_count(); i++) {
-			if (p_body.is_shape_disabled(i)) {
-				continue;
-			}
-			Box3DShapeImpl3D* shape = p_body.get_shape(i);
-			if (shape == nullptr) {
-				continue;
-			}
-
-			const bool is_separation_ray = shape->get_type() == PhysicsServer3D::SHAPE_SEPARATION_RAY;
-			const auto* ray = is_separation_ray ? static_cast<const Box3DSeparationRayShapeImpl3D*>(shape) : nullptr;
-			if (ray != nullptr) {
-				if (!p_collide_separation_ray && !ray->get_slide_on_slope()) {
+			for (int32_t i = 0; i < p_body.get_shape_count(); i++) {
+				if (p_body.is_shape_disabled(i)) {
+					continue;
+				}
+				Box3DShapeImpl3D* shape = p_body.get_shape(i);
+				if (shape == nullptr) {
 					continue;
 				}
 
-				found_supported_shape = true;
-				const Transform3D shape_transform = recovered_transform * p_body.get_shape_transform(i);
-				const Vector3 ray_vector = shape_transform.basis.get_column(2) * ray->get_length();
-				const real_t ray_length = ray_vector.length();
-				if (ray_length <= CMP_EPSILON) {
-					continue;
-				}
-
-				const Vector3 ray_direction = ray_vector / ray_length;
-				RayContext ray_context;
-				ray_context.filter = &filter;
-				b3World_CastRay(
-						space->get_world_id(),
-						godot_to_b3(shape_transform.origin),
-						godot_to_b3(ray_direction * (ray_length + margin)),
-						filter.filter,
-						cast_result_fcn,
-						&ray_context);
-				if (!ray_context.has_hit) {
-					continue;
-				}
-
-				const Vector3 surface_normal = b3_to_godot(ray_context.normal).normalized();
-				const real_t facing = surface_normal.dot(-ray_direction);
-				const real_t penetration_along_ray =
-						(ray_length + margin) * (1.0 - ray_context.fraction) - margin;
-				if (facing <= CMP_EPSILON || penetration_along_ray <= CMP_EPSILON) {
-					continue;
-				}
-
-				const Vector3 recovery_normal = ray->get_slide_on_slope() ? surface_normal : -ray_direction;
-				const real_t recovery_depth = ray->get_slide_on_slope() ? penetration_along_ray * facing : penetration_along_ray;
-				const Vector3 push = recovery_normal * (recovery_depth + B3_LINEAR_SLOP);
-				for (int32_t axis = 0; axis < 3; axis++) {
-					if (Math::abs(push[axis]) > Math::abs(accumulated_push[axis])) {
-						accumulated_push[axis] = push[axis];
+				const bool is_separation_ray = shape->get_type() == PhysicsServer3D::SHAPE_SEPARATION_RAY;
+				const auto* ray = is_separation_ray ? static_cast<const Box3DSeparationRayShapeImpl3D*>(shape) : nullptr;
+				if (ray != nullptr) {
+					// Query-only rays recover once, alongside the regular immovable geometry.
+					if (pass == 0) {
+						continue;
 					}
-				}
-				push_count++;
+					if (!p_collide_separation_ray && !ray->get_slide_on_slope()) {
+						continue;
+					}
 
-				const b3BodyId hit_body_id = b3Shape_GetBody(ray_context.shape_id);
-				auto* object = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(hit_body_id));
-				if (object != nullptr) {
-					MotionCollisionData collision;
-					collision.object = object;
-					collision.position = b3_to_godot(ray_context.point);
-					collision.normal = recovery_normal;
-					collision.depth = recovery_depth;
-					collision.local_shape = i;
-					collision.collider_shape = object->find_shape_index(ray_context.shape_id);
-					append_motion_collision(recovery_collisions, collision);
+					found_supported_shape = true;
+					const Transform3D shape_transform = recovered_transform * p_body.get_shape_transform(i);
+					const Vector3 ray_vector = shape_transform.basis.get_column(2) * ray->get_length();
+					const real_t ray_length = ray_vector.length();
+					if (ray_length <= CMP_EPSILON) {
+						continue;
+					}
+
+					const Vector3 ray_direction = ray_vector / ray_length;
+					RayContext ray_context;
+					ray_context.filter = &filter;
+					b3World_CastRay(
+							space->get_world_id(),
+							godot_to_b3(shape_transform.origin),
+							godot_to_b3(ray_direction * (ray_length + margin)),
+							filter.filter,
+							cast_result_fcn,
+							&ray_context);
+					if (!ray_context.has_hit) {
+						continue;
+					}
+
+					const Vector3 surface_normal = b3_to_godot(ray_context.normal).normalized();
+					const real_t facing = surface_normal.dot(-ray_direction);
+					const real_t penetration_along_ray =
+							(ray_length + margin) * (1.0 - ray_context.fraction) - margin;
+					if (facing <= CMP_EPSILON || penetration_along_ray <= CMP_EPSILON) {
+						continue;
+					}
+
+					const Vector3 recovery_normal = ray->get_slide_on_slope() ? surface_normal : -ray_direction;
+					const real_t recovery_depth = ray->get_slide_on_slope() ? penetration_along_ray * facing : penetration_along_ray;
+					const Vector3 push = recovery_normal * (recovery_depth + B3_LINEAR_SLOP);
+					for (int32_t axis = 0; axis < 3; axis++) {
+						if (Math::abs(push[axis]) > Math::abs(accumulated_push[axis])) {
+							accumulated_push[axis] = push[axis];
+						}
+					}
+					push_count++;
+
+					const b3BodyId hit_body_id = b3Shape_GetBody(ray_context.shape_id);
+					auto* object = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(hit_body_id));
+					if (object != nullptr) {
+						MotionCollisionData collision;
+						collision.object = object;
+						collision.position = b3_to_godot(ray_context.point);
+						collision.normal = recovery_normal;
+						collision.depth = recovery_depth;
+						collision.local_shape = i;
+						collision.collider_shape = object->find_shape_index(ray_context.shape_id);
+						append_motion_collision(recovery_collisions, collision);
+					}
+					continue;
 				}
-				continue;
+
+				const Box3DShapeProxy3D shape_proxy(shape, recovered_transform * p_body.get_shape_transform(i), margin);
+				if (!shape_proxy.is_supported()) {
+					continue;
+				}
+				found_supported_shape = true;
+
+				RecoveryContext context;
+				context.filter = &filter;
+				context.dynamic_bodies = pass == 0;
+				context.query_aabb = proxy_aabb(shape_proxy.get_proxy());
+				context.preferred_motion = p_motion;
+				context.accumulated_push = &accumulated_push;
+				context.push_count = &push_count;
+				context.local_shape = i;
+				context.collisions = &recovery_collisions;
+				b3World_OverlapShape(
+						space->get_world_id(),
+						b3Vec3_zero,
+						&shape_proxy.get_proxy(),
+						filter.filter,
+						recovery_result_fcn,
+						&context);
 			}
 
-			const Box3DShapeProxy3D shape_proxy(shape, recovered_transform * p_body.get_shape_transform(i), margin);
-			if (!shape_proxy.is_supported()) {
-				continue;
+			if (push_count > 0 && accumulated_push.length_squared() > CMP_EPSILON) {
+				recovered_transform.origin += accumulated_push;
+				recovered = true;
+				pushed = true;
 			}
-			found_supported_shape = true;
-
-			RecoveryContext context;
-			context.filter = &filter;
-			context.query_aabb = proxy_aabb(shape_proxy.get_proxy());
-			context.preferred_motion = p_motion;
-			context.accumulated_push = &accumulated_push;
-			context.push_count = &push_count;
-			context.local_shape = i;
-			context.collisions = &recovery_collisions;
-			b3World_OverlapShape(
-					space->get_world_id(),
-					b3Vec3_zero,
-					&shape_proxy.get_proxy(),
-					filter.filter,
-					recovery_result_fcn,
-					&context);
 		}
-
-		if (push_count == 0 || accumulated_push.length_squared() <= CMP_EPSILON) {
+		if (!pushed) {
 			break;
 		}
-		recovered_transform.origin += accumulated_push;
-		recovered = true;
 	}
 
 	bool found_collision = false;
