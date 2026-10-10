@@ -274,6 +274,10 @@ bool recovery_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 		return true;
 	}
 
+	const b3ShapeType target_type = b3Shape_GetType(p_shape_id);
+	if (target_type == b3_meshShape || target_type == b3_heightShape) {
+		return true;
+	}
 	const b3AABB target_aabb = exact_shape_aabb(p_shape_id);
 	const float depths[3] = {
 		MIN(ctx->query_aabb.upperBound.x, target_aabb.upperBound.x) -
