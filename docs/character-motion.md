@@ -20,13 +20,27 @@ forces, or wake a rigid body. Per-call body/object exclusions apply to both
 recovery and casting. `recovery_as_collision=false` suppresses recovery-only
 collision reporting, not the recovery displacement itself.
 
+An embedded `SeparationRayShape3D` endpoint is also recovered when
+`collide_separation_ray=false`; that flag gates the requested-motion cast for
+non-sliding rays, not initial-overlap recovery.
+
+Transform-driven kinematic bodies, including `AnimatableBody3D`, queue their
+next physics-step target instead of teleporting each animation update. Motion
+collisions report their linear/angular velocity so grounded characters ride
+them. Initial placement is immediate, and stopped animations clear target-driven
+velocity instead of drifting. Explicit velocity-driven kinematic bodies retain
+their separate velocity path.
+
 The regressions exercise geometric normals and bounded displacement for five
 convex shapes, a large query margin, compound floor/wall contacts, priority in a
 too-narrow passage, rigid loads on stationary/moving characters, and actual
-`move_and_slide` grounding across slopes and terrain seams. These are behavioral
-checks, not exact cross-engine trajectory comparisons.
+`move_and_slide` grounding across slopes and terrain seams. A separate regression
+checks animated platform carry, stopping, and small linear/angular targets.
+These are behavioral checks, not exact cross-engine trajectory comparisons.
 
 These fixes address adapter behavior. They do not add dynamic concave bodies,
-concave query shapes or sensor visits by concave bodies; those remain separate
-Box3D restrictions. Non-uniform collision-shape scaling is not certified by this
-milestone; use dimensions on the shape resource and unit-scale body transforms.
+sensor visits by concave bodies; those remain separate Box3D restrictions.
+Concave query shapes and penetration-depth pairs from `collide_shape()` remain
+adapter limitations. Non-uniform collision-shape scaling is not certified by
+this milestone; use dimensions on the shape resource and unit-scale body
+transforms.

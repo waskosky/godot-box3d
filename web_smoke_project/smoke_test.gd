@@ -2,6 +2,19 @@ extends Node3D
 
 const EXPECTED_ENGINE := "Box3D Physics"
 
+class MovingPlatform extends AnimatableBody3D:
+    var frames := 0
+    var stopped_position := Vector3.ZERO
+
+    func _physics_process(delta: float) -> void:
+        if frames < 120:
+            var target := transform
+            target.origin.x += 0.6 * delta
+            transform = target
+        elif frames == 122:
+            stopped_position = position
+        frames += 1
+
 var _body: RigidBody3D
 var _area_entered := false
 var _door: RigidBody3D
@@ -11,6 +24,10 @@ var _loads: Array[RigidBody3D] = []
 var _character_support_ok := true
 var _terrain: Array[Dictionary] = []
 var _terrain_ok := true
+var _platform: MovingPlatform
+var _platform_rider: CharacterBody3D
+var _platform_grounded := 0
+var _platform_ok := true
 var _physics_usec := 0
 var _physics_frames := 0
 var _status_label: Label
@@ -30,6 +47,7 @@ func _ready() -> void:
     _create_hinge_door()
     _create_character_supports()
     _create_terrain_characters()
+    _create_moving_platform()
     _run_checks()
 
 
@@ -76,8 +94,44 @@ func _physics_process(_delta: float) -> void:
         fixture.max_height_error = maxf(fixture.max_height_error, absf(character.position.y - expected_y))
         if character.is_on_floor():
             fixture.grounded += 1
+    _platform_rider.velocity = Vector3(0, -1, 0)
+    _platform_rider.move_and_slide()
+    if _platform_rider.is_on_floor():
+        _platform_grounded += 1
+    if absf(_platform_rider.position.y - 2.5) > 0.03:
+        _platform_ok = false
     _physics_usec += Time.get_ticks_usec() - started
     _physics_frames += 1
+
+
+func _create_moving_platform() -> void:
+    _platform = MovingPlatform.new()
+    _platform.position = Vector3(0, 1.5, 5)
+    _platform.collision_layer = 16
+    _platform.add_child(_box_collision(Vector3(4, 1, 2)))
+    var visual := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(4, 1, 2)
+    visual.mesh = mesh
+    _platform.add_child(visual)
+    add_child(_platform)
+    _platform_rider = CharacterBody3D.new()
+    _platform_rider.collision_layer = 0
+    _platform_rider.collision_mask = 16
+    _platform_rider.position = Vector3(0, 2.5, 5)
+    var collision := CollisionShape3D.new()
+    var capsule := CapsuleShape3D.new()
+    capsule.radius = 0.2
+    capsule.height = 1.0
+    collision.shape = capsule
+    _platform_rider.add_child(collision)
+    var rider_visual := MeshInstance3D.new()
+    var rider_mesh := CapsuleMesh.new()
+    rider_mesh.radius = capsule.radius
+    rider_mesh.height = capsule.height
+    rider_visual.mesh = rider_mesh
+    _platform_rider.add_child(rider_visual)
+    add_child(_platform_rider)
 
 
 func _create_terrain_characters() -> void:
@@ -299,6 +353,16 @@ func _run_checks() -> void:
             _terrain_ok = false
     if not _terrain_ok:
         failures.append("Character slope/terrain movement lost support or stalled")
+    print("Animated platform: x=%.3f rider_x=%.3f grounded=%d stopped_velocity=%s" % [_platform.position.x, _platform_rider.position.x, _platform_grounded, _platform_rider.get_platform_velocity()])
+    _platform_ok = _platform_ok and (
+        absf(_platform.position.x - 1.2) < 0.04
+        and absf(_platform_rider.position.x - _platform.position.x) < 0.05
+        and _platform.position.distance_to(_platform.stopped_position) < 0.001
+        and _platform_rider.get_platform_velocity().length() < 0.03
+        and _platform_grounded >= 170
+    )
+    if not _platform_ok:
+        failures.append("Animated platform did not carry its character or stop cleanly")
     motion_parameters.from.origin.y = 1.4
     motion_parameters.motion = Vector3.ZERO
     motion_parameters.collide_separation_ray = false
@@ -335,7 +399,8 @@ func _run_checks() -> void:
     _append_status("Idle/moving character rigid-load support: %s" % ("PASS" if _character_support_ok else "FAIL"))
     _append_status("Slope/terrain character movement: %s" % ("PASS" if _terrain_ok else "FAIL"))
     _append_status("Separation ray recovery without casting: %s" % ("PASS" if embedded_ok else "FAIL"))
-    _append_status("Five character queries: %.1f us/frame average" % (float(_physics_usec) / maxi(_physics_frames, 1)))
+    _append_status("Animated platform character support: %s" % ("PASS" if _platform_ok else "FAIL"))
+    _append_status("Six character queries: %.1f us/frame average" % (float(_physics_usec) / maxi(_physics_frames, 1)))
 
     if failures.is_empty():
         _append_status("RESULT: PASS")

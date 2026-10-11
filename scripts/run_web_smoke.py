@@ -107,6 +107,7 @@ def main() -> int:
         "character_support": "Idle/moving character rigid-load support: PASS" in console_lines,
         "terrain_motion": "Slope/terrain character movement: PASS" in console_lines,
         "ray_recovery": "Separation ray recovery without casting: PASS" in console_lines,
+        "moving_platform": "Animated platform character support: PASS" in console_lines,
         "physics": "RESULT: PASS" in console_lines,
     }
     result = {

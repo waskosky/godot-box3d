@@ -108,8 +108,26 @@ For the automated browser assertion:
   --screenshot build/web-smoke-release.png
 ```
 
-The test passes only when the extension registers, Box3D is the requested backend, a rigid body settles on the floor, an area callback fires, a hinge moves, a `SeparationRayShape3D` motion query snaps to the floor, and resting rigid loads remain supported by idle and moving characters.
+The test passes only when the extension registers, Box3D is the requested backend,
+a rigid body settles on the floor, an area callback fires, a hinge moves,
+separation rays cast and recover correctly, resting rigid loads remain supported
+by idle/moving characters, characters stay grounded on slopes/mesh/heightfield
+terrain, and an animated platform carries its character then stops cleanly.
 The Web workflow runs this release-export smoke test in headless Chromium before it packages the bundle.
+
+For desktop Firefox and WebKit sanity checks, install those Playwright browsers
+and run the same exported scene:
+
+```bash
+.venv/bin/python -m playwright install firefox webkit
+.venv/bin/python scripts/run_web_smoke.py --dir build/web-smoke-release --browser firefox
+.venv/bin/python scripts/run_web_smoke.py --dir build/web-smoke-release --browser webkit
+```
+
+`--browser-executable /path/to/browser` can select an existing compatible browser
+installation. The printed character-query timing is diagnostic, not a portable
+performance budget. Desktop WebKit and touch emulation do not certify physical
+iPhone/Safari or Android devices.
 
 ## Important compatibility rules
 

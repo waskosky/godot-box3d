@@ -47,13 +47,14 @@ Use this if you have an existing project or want stock nodes and addons to work.
 - Areas, including overlap events, gravity/damping overrides, priority ordering, and point gravity
 - Direct space state queries: ray casts, point and shape intersection, shape casts (`cast_motion`), `collide_shape`, and `rest_info`
 - `body_test_motion`, so `CharacterBody3D` and `move_and_slide()` work
+- Geometry-based character overlap recovery on slopes and terrain, per-call motion exclusions, and animated kinematic platform carry
 - Contact monitoring, so `RigidBody3D` reports real contact points, normals, and impulses
 - Queries and contact results report per-shape indices for multi-shape bodies
 - Viewport physics picking honors `CollisionObject3D.input_ray_pickable` for bodies and areas
 - Per-pair collision exceptions
 - Joints: pin, hinge, and slider (pin anchors can be moved after creation)
 - Multithreaded solver: the worker count auto-detects physical cores and can be overridden with the `physics/box3d/worker_count` project setting (results are deterministic across worker counts)
-- A test project with a demo hub, a deterministic benchmark, and 27 headless regression tests
+- A test project with a demo hub, a deterministic benchmark, and headless physics regression tests
 
 ## What's left to do
 
@@ -75,7 +76,7 @@ Character overlap recovery and its validation are described in
   This diverges from Godot's built-in physics (and Jolt), which report such a body on the first physics frame.
   If you need a body to be detected by an area, give it a convex shape. (A trimesh may still be used *as* an `Area3D`'s own shape to detect convex bodies passing through it.)
 
-- **`collide_shape()` reports contact points without penetration depth.** Box3D exposes GJK, which finds the closest points between two shapes but cannot measure how far they already overlap.
+- **`collide_shape()` currently reports contact points without penetration depth.** This adapter still uses GJK witness points for that API, not Box3D's penetration manifolds. Character overlap recovery uses the manifolds separately; this query limitation is not an inherent Box3D restriction.
   For a genuinely overlapping pair both returned points are the same witness point, so the pair's separation reads as zero, where Godot's built-in physics returns two points whose distance is the penetration depth.
   Whether shapes overlap, which bodies they are, `max_results`, and `collision_mask` all behave normally, so use it to answer "is anything here, and roughly where" rather than "how deep".
 
@@ -166,7 +167,9 @@ cmake --build build-win --parallel
 GODOT_BIN=/path/to/godot scripts/run_headless_tests.sh
 ```
 
-The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs 27 headless regression tests. It exits nonzero if a test fails, emits an unexpected engine/script error, or leaks a Box3D RID. Coverage includes rigid loads on stationary and moving characters, motion-query shape indices, and separation-ray recovery. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
+The runner builds the extension, registers it, checks the Box3D backend actually loaded, then runs the headless physics regression suite. It exits nonzero if a test fails, emits an unexpected engine/script error, or leaks a Box3D RID. Coverage includes character slopes/terrain and competing contacts, motion exclusions and shape indices, separation-ray recovery, animated platform carry, and rigid-body CCD, inertia and sleep/wake behavior. `GODOT_BIN` can be omitted when a suitable `godot` is on `PATH`.
+
+See [Physics readiness](docs/physics-readiness.md) for the validated milestone and remaining acceptance gates.
 
 CI executes that suite with Godot 4.7 on Linux, Windows, and macOS, and separately on the minimum supported Godot 4.3. It also runs the suite under UndefinedBehaviorSanitizer and compile/link checks a Debug build instrumented with AddressSanitizer. Stock Godot binaries use `RTLD_DEEPBIND`, so running an ASan-instrumented GDExtension requires an ASan-built Godot host.
 

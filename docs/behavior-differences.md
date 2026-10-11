@@ -4,7 +4,11 @@ title: Behavior differences
 
 # Behavior differences
 
-Places where Box3D behaves differently from Godot's built-in physics. These are design differences in the underlying engine, not bugs, and none of them are things a drop-in backend can paper over.
+Places where this backend behaves differently from Godot's built-in physics.
+Some are Box3D design restrictions; others are adapter limitations or deliberate
+integration choices. Adapter limitations can be improved without changing the
+underlying engine. See [Character motion recovery](character-motion.md) for the
+current recovery policy.
 
 ## Separation rays are query-only
 
@@ -24,9 +28,12 @@ So an `Area3D` silently ignores a body whose shape is a trimesh or heightmap: no
 
 If you need a body to be detected by an area, give it a convex shape. A trimesh may still be used *as* an `Area3D`'s own shape to detect convex bodies passing through it.
 
-## `collide_shape()` reports contact points without penetration depth
+## `collide_shape()` currently reports contact points without penetration depth
 
-Box3D exposes GJK, which finds the closest points between two shapes but cannot measure how far they already overlap.
+This adapter currently implements this query using GJK witness points, which do
+not provide penetration depth. Box3D also exposes penetration manifolds; the
+character overlap-recovery path uses them, but `collide_shape()` has not yet
+been migrated. This is an adapter gap, not an inherent Box3D limitation.
 
 For a genuinely overlapping pair, both returned points are the same witness point, so the pair's separation reads as zero. Godot's built-in physics returns two points whose distance is the penetration depth.
 
@@ -37,6 +44,9 @@ Whether shapes overlap, which bodies they are, `max_results`, and `collision_mas
 `intersect_shape`, `cast_motion`, `collide_shape`, `rest_info`, and `body_test_motion` build a point-cloud proxy of the shape being queried *with*. Trimesh, heightmap, and world-boundary shapes have no finite point cloud.
 
 Passing one of those as the query shape returns no results. They work normally as targets in the world.
+This is the current query adapter's support boundary, not a claim that Box3D
+cannot collide a convex body with those fixtures. Separation rays have their own
+query-only implementation.
 
 ## Friction and restitution combine differently
 
