@@ -199,6 +199,7 @@ private:
 	Transform3D kinematic_target;
 	bool kinematic_target_pending = false;
 	bool target_driven = false;
+	bool kinematic_transform_initialized = false;
 
 	real_t mass = 1.0;
 	Vector3 inertia;

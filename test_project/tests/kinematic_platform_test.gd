@@ -2,9 +2,14 @@ extends SceneTree
 
 class MovingPlatform extends AnimatableBody3D:
 	var moving := false
+	var speed := 0.6
+	var angular_speed := 0.0
 	func _physics_process(delta: float) -> void:
 		if moving:
-			position.x += 0.6 * delta
+			var target := transform
+			target.origin.x += speed * delta
+			target.basis = Basis(Vector3.UP, angular_speed * delta) * target.basis
+			transform = target
 
 var failures := 0
 
@@ -54,6 +59,17 @@ func _run() -> void:
 		await physics_frame
 	if platform.position.distance_to(stopped) > 0.001 or character.get_platform_velocity().length() > 0.03:
 		_fail("a stopped animation retained velocity or drifted")
+	platform.speed = 0.02
+	platform.angular_speed = 0.2
+	platform.moving = true
+	for frame in 60:
+		character.velocity = Vector3(0, -1, 0)
+		character.move_and_slide()
+		await physics_frame
+	if absf(platform.position.x - stopped.x - 0.02) > 0.005 or absf(platform.rotation.y - 0.2) > 0.01:
+		_fail("small linear or angular target motion was lost")
+	if absf(character.get_platform_angular_velocity().y - 0.2) > 0.03:
+		_fail("motion collisions did not report angular platform velocity")
 	if failures == 0:
 		print("RESULT: PASS - animated kinematic targets move once, carry grounded characters and stop without drift")
 	quit(1 if failures else 0)

@@ -72,6 +72,7 @@ void Box3DBodyImpl3D::set_mode(BodyMode p_mode) {
 	mode = p_mode;
 	kinematic_target_pending = false;
 	target_driven = false;
+	kinematic_transform_initialized = false;
 	if (has_body_id()) {
 		b3Body_SetType(body_id, to_box3d_body_type(mode));
 		_update_motion_locks();
@@ -80,7 +81,7 @@ void Box3DBodyImpl3D::set_mode(BodyMode p_mode) {
 }
 
 void Box3DBodyImpl3D::set_transform(const Transform3D& p_transform) {
-	if (mode == PhysicsServer3D::BODY_MODE_KINEMATIC && has_body_id()) {
+	if (mode == PhysicsServer3D::BODY_MODE_KINEMATIC && has_body_id() && kinematic_transform_initialized) {
 		// Transform-driven kinematic bodies need a velocity during the next
 		// simulation step. Teleporting them loses platform carry and can race
 		// their state-sync callback. Multiple writes keep the last target.
@@ -90,6 +91,7 @@ void Box3DBodyImpl3D::set_transform(const Transform3D& p_transform) {
 		return;
 	}
 	Box3DShapedObjectImpl3D::set_transform(p_transform);
+	kinematic_transform_initialized = mode == PhysicsServer3D::BODY_MODE_KINEMATIC;
 }
 
 void Box3DBodyImpl3D::set_mass(real_t p_mass) {
