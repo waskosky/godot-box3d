@@ -1,0 +1,15 @@
+diff --git a/platform/web/js/libs/library_godot_webgl2.js b/platform/web/js/libs/library_godot_webgl2.js
+--- a/platform/web/js/libs/library_godot_webgl2.js
++++ b/platform/web/js/libs/library_godot_webgl2.js
+@@ -38,8 +38,9 @@ const GodotWebGL2 = {
+ 	godot_webgl2_glGetBufferSubData__sig: 'vippp',
+ 	godot_webgl2_glGetBufferSubData__deps: ['$GL', 'emscripten_webgl_get_current_context'],
+ 	godot_webgl2_glGetBufferSubData: function (target, offset, size, data) {
+-		const gl_context_handle = _emscripten_webgl_get_current_context();
+-		const gl = GL.getContext(gl_context_handle);
++		// The proxied browser thread owns the JS context, but its native TLS
++		// context handle may be unset when the game runs on a pthread.
++		const gl = GL.currentContext;
+ 		if (gl) {
+ 			gl.GLctx['getBufferSubData'](target, offset, HEAPU8, data, size);
+ 		}
