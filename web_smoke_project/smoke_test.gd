@@ -9,6 +9,10 @@ var _initial_door_rotation := 0.0
 var _characters: Array[CharacterBody3D] = []
 var _loads: Array[RigidBody3D] = []
 var _character_support_ok := true
+var _terrain: Array[Dictionary] = []
+var _terrain_ok := true
+var _physics_usec := 0
+var _physics_frames := 0
 var _status_label: Label
 var _result_lines: Array[String] = []
 
@@ -25,6 +29,7 @@ func _ready() -> void:
     _create_falling_body_and_area()
     _create_hinge_door()
     _create_character_supports()
+    _create_terrain_characters()
     _run_checks()
 
 
@@ -52,12 +57,79 @@ func _create_character_supports() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+    var started := Time.get_ticks_usec()
     for index in _characters.size():
         var character := _characters[index]
         character.velocity = Vector3(index * 0.15, -0.5, 0)
         character.move_and_slide()
         if absf(character.position.y - 0.5) > 0.15:
             _character_support_ok = false
+    for fixture in _terrain:
+        var character: CharacterBody3D = fixture.body
+        character.velocity = Vector3(1.0, -1.0, 0.0)
+        character.move_and_slide()
+        var expected_y: float = fixture.floor.position.y + (0.5 if fixture.kind == 2 else 0.75)
+        if fixture.kind == 0:
+            expected_y = -0.25 + 0.25 / cos(PI / 6.0) + tan(PI / 6.0) * (character.position.x - fixture.floor.position.x) + 0.2 / cos(PI / 6.0) + 0.3
+        if absf(character.position.y - expected_y) > 0.045:
+            _terrain_ok = false
+        fixture.max_height_error = maxf(fixture.max_height_error, absf(character.position.y - expected_y))
+        if character.is_on_floor():
+            fixture.grounded += 1
+    _physics_usec += Time.get_ticks_usec() - started
+    _physics_frames += 1
+
+
+func _create_terrain_characters() -> void:
+    for index in 3:
+        var floor_body := StaticBody3D.new()
+        floor_body.collision_layer = 2 << index
+        floor_body.position = Vector3(-4.0 + index * 4.0, -0.25, -2.5)
+        var collision := CollisionShape3D.new()
+        var mesh := BoxMesh.new()
+        mesh.size = Vector3(6, 0.5, 3)
+        if index == 0:
+            var box := BoxShape3D.new()
+            box.size = mesh.size
+            collision.shape = box
+            floor_body.rotation.z = PI / 6.0
+        elif index == 1:
+            collision.shape = mesh.create_trimesh_shape()
+        else:
+            var heightmap := HeightMapShape3D.new()
+            heightmap.map_width = 9
+            heightmap.map_depth = 9
+            var data := PackedFloat32Array()
+            data.resize(81)
+            data.fill(0.0)
+            heightmap.map_data = data
+            collision.shape = heightmap
+            floor_body.position.y = 0.0
+        floor_body.add_child(collision)
+        var visual := MeshInstance3D.new()
+        visual.mesh = mesh
+        floor_body.add_child(visual)
+        add_child(floor_body)
+        var character := CharacterBody3D.new()
+        character.collision_layer = 0
+        character.collision_mask = floor_body.collision_layer
+        var capsule := CapsuleShape3D.new()
+        capsule.radius = 0.2
+        capsule.height = 1.0
+        var solid := CollisionShape3D.new()
+        solid.shape = capsule
+        character.add_child(solid)
+        character.position = floor_body.position + Vector3(0.5 if index == 2 else -1.0, 0.48 if index == 2 else 0.73, 0.5)
+        if index == 0:
+            character.position.y = -0.25 + 0.25 / cos(PI / 6.0) - tan(PI / 6.0) + 0.2 / cos(PI / 6.0) + 0.3 - 0.02
+        var actor_mesh := MeshInstance3D.new()
+        var capsule_mesh := CapsuleMesh.new()
+        capsule_mesh.radius = capsule.radius
+        capsule_mesh.height = capsule.height
+        actor_mesh.mesh = capsule_mesh
+        character.add_child(actor_mesh)
+        add_child(character)
+        _terrain.append({"body": character, "floor": floor_body, "kind": index, "start": character.position.x, "grounded": 0, "max_height_error": 0.0})
 
 
 func _create_status_ui() -> void:
@@ -66,13 +138,13 @@ func _create_status_ui() -> void:
 
     var panel := ColorRect.new()
     panel.position = Vector2(16, 16)
-    panel.size = Vector2(700, 310)
+    panel.size = Vector2(700, 400)
     panel.color = Color(0.02, 0.02, 0.02, 0.82)
     layer.add_child(panel)
 
     _status_label = Label.new()
     _status_label.position = Vector2(16, 12)
-    _status_label.size = Vector2(668, 286)
+    _status_label.size = Vector2(668, 376)
     _status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     panel.add_child(_status_label)
 
@@ -221,6 +293,20 @@ func _run_checks() -> void:
     )
 
     var failures: Array[String] = []
+    for fixture in _terrain:
+        print("Terrain %d: progress=%.3f grounded=%d height_error=%.4f" % [fixture.kind, fixture.body.position.x - fixture.start, fixture.grounded, fixture.max_height_error])
+        if fixture.body.position.x - fixture.start < 0.5 or fixture.grounded < 170:
+            _terrain_ok = false
+    if not _terrain_ok:
+        failures.append("Character slope/terrain movement lost support or stalled")
+    motion_parameters.from.origin.y = 1.4
+    motion_parameters.motion = Vector3.ZERO
+    motion_parameters.collide_separation_ray = false
+    motion_parameters.recovery_as_collision = true
+    var embedded_result := PhysicsTestMotionResult3D.new()
+    var embedded_ok := PhysicsServer3D.body_test_motion(character.get_rid(), motion_parameters, embedded_result) and embedded_result.get_travel().y > 0.09
+    if not embedded_ok:
+        failures.append("Embedded separation ray did not recover without casting")
     var requested_backend: String = ProjectSettings.get_setting("physics/3d/physics_engine", "")
     if requested_backend != EXPECTED_ENGINE:
         failures.append("Project physics backend is not Box3D")
@@ -247,6 +333,9 @@ func _run_checks() -> void:
     _append_status("Door rotation delta: %.3f" % absf(_door.rotation.z - _initial_door_rotation))
     _append_status("Separation ray motion query: %s" % ("PASS" if ray_ok else "FAIL"))
     _append_status("Idle/moving character rigid-load support: %s" % ("PASS" if _character_support_ok else "FAIL"))
+    _append_status("Slope/terrain character movement: %s" % ("PASS" if _terrain_ok else "FAIL"))
+    _append_status("Separation ray recovery without casting: %s" % ("PASS" if embedded_ok else "FAIL"))
+    _append_status("Five character queries: %.1f us/frame average" % (float(_physics_usec) / maxi(_physics_frames, 1)))
 
     if failures.is_empty():
         _append_status("RESULT: PASS")

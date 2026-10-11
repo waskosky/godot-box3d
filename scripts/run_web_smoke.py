@@ -31,6 +31,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the exported Box3D Web smoke scene.")
     parser.add_argument("--dir", default="build/web-smoke")
     parser.add_argument("--browser-executable", default="")
+    parser.add_argument("--browser", choices=("chromium", "firefox", "webkit"), default="chromium")
     parser.add_argument("--screenshot", default="")
     parser.add_argument("--timeout", type=float, default=45.0)
     args = parser.parse_args()
@@ -64,7 +65,7 @@ def main() -> int:
             launch_options: dict[str, object] = {"headless": True}
             if args.browser_executable:
                 launch_options["executable_path"] = args.browser_executable
-            browser = playwright.chromium.launch(**launch_options)
+            browser = getattr(playwright, args.browser).launch(**launch_options)
             page = browser.new_page(viewport={"width": 1280, "height": 720})
 
             def handle_console(message: object) -> None:
@@ -104,13 +105,16 @@ def main() -> int:
         "extension": any("Extension class registered: true" in line for line in console_lines),
         "separation_ray": any("Separation ray motion query: PASS" in line for line in console_lines),
         "character_support": "Idle/moving character rigid-load support: PASS" in console_lines,
+        "terrain_motion": "Slope/terrain character movement: PASS" in console_lines,
+        "ray_recovery": "Separation ray recovery without casting: PASS" in console_lines,
         "physics": "RESULT: PASS" in console_lines,
     }
     result = {
+        "browser": args.browser,
         "ok": bool(response and response.ok) and all(required.values()) and not errors,
         "required": required,
         "errors": errors,
-        "console_tail": console_lines[-12:],
+        "console_tail": console_lines[-20:],
     }
     print(json.dumps(result, indent=2))
     return 0 if result["ok"] else 1
