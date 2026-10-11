@@ -64,9 +64,22 @@ render-context fallback and sustained performance/memory acceptance separate.
 - Changing only the generated JS wrapper, with the same compiled wasm and
   unchanged smoke fixtures/assertions, passed the full static physics scene in
   Chromium and desktop WebKit. Their final frames were inspected.
-- Firefox static acceptance is still open: the patched full scene stalled before
-  completing, and an attempted screenshot timed out. Dynamic/no-thread Firefox
-  already passed. Do not broaden the supported profile from the two successes.
-- The source patch applies cleanly to pinned Godot `5b4e0cb0f`. Rebuild and verify
-  an immutable host template from that source patch before deployment; the JS
-  diagnostic is not that final producer receipt or physical-device proof.
+- A fresh source build retaining the same host patches and static archives
+  passed the unchanged full scene in Chromium, Firefox and desktop WebKit. No
+  exported JavaScript modification was used; all final frames were inspected.
+  This runtime qualification used Box3D integration commit
+  `2f928a87ec4cfc17d78fbaac12196826fd744091`, not later terrain candidates.
+- Firefox initially exceeded the short test window. A timed observation reached
+  scene setup around 97 seconds after launch; the unmodified scene passed with
+  `--timeout 180`. This is functional evidence, not acceptable cold-start latency.
+  Do not change the ordinary no-thread smoke default to hide that host cost.
+- The source patch applies cleanly to pinned Godot `5b4e0cb0f`. The locally
+  rebuilt host template SHA-256 was
+  `d8e9dded57027a5f42c509435a8a440906dc1b0e4685e96a63d0fa2f8e0b411a`;
+  its readback patch SHA-256 was
+  `3e2efb2e07db23cd5f429dec3b68b7e8a53659cf10f1ca523bd148a1de342eae`.
+  These identify one host-specific build, not a portable release for every host.
+- The supported default remains dynamic/no-thread Web. Before repinning a host,
+  rebuild and qualify its exact latest physics source, include all host patches,
+  archive/module hashes and compiler flags in its immutable receipt, and check
+  startup budgets and physical devices. No deployment pin was changed here.
