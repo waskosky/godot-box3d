@@ -76,6 +76,14 @@ func _run() -> void:
 	else:
 		_check(false, "separation-ray recovery reports one collision")
 
+	recovery_parameters.collide_separation_ray = false
+	var regular_recovery := PhysicsTestMotionResult3D.new()
+	var regular_recovery_hit := PhysicsServer3D.body_test_motion(
+			body.get_rid(), recovery_parameters, regular_recovery)
+	_check(regular_recovery_hit, "regular motion still recovers embedded separation rays")
+	_check(regular_recovery.get_travel().is_equal_approx(recovery_result.get_travel()),
+			"collide_separation_ray affects casting, not overlap recovery")
+
 	var slope_body := StaticBody3D.new()
 	var slope_collision := CollisionShape3D.new()
 	var slope_shape := BoxShape3D.new()
