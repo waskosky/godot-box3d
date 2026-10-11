@@ -113,6 +113,8 @@ a rigid body settles on the floor, an area callback fires, a hinge moves,
 separation rays cast and recover correctly, resting rigid loads remain supported
 by idle/moving characters, characters stay grounded on slopes/mesh/heightfield
 terrain, and an animated platform carries its character then stops cleanly.
+The heightmap character starts in the grid's negative half and crosses its
+center, so a corner-origin collision surface cannot satisfy the terrain check.
 The Web workflow runs this release-export smoke test in headless Chromium before it packages the bundle.
 
 For desktop Firefox and WebKit sanity checks, install those Playwright browsers
@@ -126,7 +128,10 @@ and run the same exported scene:
 
 `--browser-executable /path/to/browser` can select an existing compatible browser
 installation. The printed character-query timing is diagnostic, not a portable
-performance budget. Desktop WebKit and touch emulation do not certify physical
+startup or frame-rate budget. A local Firefox qualification may need
+`--timeout 180` to separate slow startup from a failing physics check. Record
+that longer window; it does not count as meeting a cold-start performance budget.
+Desktop WebKit and touch emulation do not certify physical
 iPhone/Safari or Android devices.
 
 ## Important compatibility rules

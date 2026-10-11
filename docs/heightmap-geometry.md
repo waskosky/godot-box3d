@@ -4,6 +4,9 @@
 spacing and row-major heights. Local attachment translations and rotations must
 move the collision surface just as they move its Godot debug geometry.
 
+If a project added an offset to compensate for the old corner-origin collision
+bug, remove that workaround when adopting this candidate.
+
 The pinned Box3D heightfield API creates a corner-origin grid and cannot apply a
 fixture-local transform. The adapter therefore builds a centered static mesh:
 identity attachments share its geometry, and transformed attachments reuse the

@@ -43,7 +43,7 @@ func _run() -> void:
 		solid.shape = capsule
 		character.add_child(solid)
 		character.floor_snap_length = 0.15
-		character.position = Vector3(index * 20.0 + (0.5 if index == 2 else -1.0), 0.88, 0.5)
+		character.position = Vector3(index * 20.0 + (-1.5 if index == 2 else -1.0), 0.88, -0.5 if index == 2 else 0.5)
 		if index == 0:
 			character.position.y = -0.5 + 0.5 / cos(PI / 6.0) - tan(PI / 6.0) + 0.35 / cos(PI / 6.0) + 0.55 - 0.02
 		root.add_child(character)

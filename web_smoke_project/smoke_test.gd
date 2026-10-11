@@ -138,6 +138,9 @@ func _create_terrain_characters() -> void:
     for index in 3:
         var floor_body := StaticBody3D.new()
         floor_body.collision_layer = 2 << index
+        # Godot pair filtering accepts either body's mask. Only each terrain
+        # character should interact with these floors, not the hinge/load demo.
+        floor_body.collision_mask = 0
         floor_body.position = Vector3(-4.0 + index * 4.0, -0.25, -2.5)
         var collision := CollisionShape3D.new()
         var mesh := BoxMesh.new()
@@ -173,7 +176,9 @@ func _create_terrain_characters() -> void:
         var solid := CollisionShape3D.new()
         solid.shape = capsule
         character.add_child(solid)
-        character.position = floor_body.position + Vector3(0.5 if index == 2 else -1.0, 0.48 if index == 2 else 0.73, 0.5)
+        # Cross the centered heightmap's negative half, not just the native
+        # corner-origin grid's old positive-coordinate overlap.
+        character.position = floor_body.position + Vector3(-1.5 if index == 2 else -1.0, 0.48 if index == 2 else 0.73, -0.5 if index == 2 else 0.5)
         if index == 0:
             character.position.y = -0.25 + 0.25 / cos(PI / 6.0) - tan(PI / 6.0) + 0.2 / cos(PI / 6.0) + 0.3 - 0.02
         var actor_mesh := MeshInstance3D.new()

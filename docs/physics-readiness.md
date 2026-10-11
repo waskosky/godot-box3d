@@ -9,7 +9,10 @@ upstream pull requests remain based directly on upstream `main`.
 The native suite exercises actual Godot bodies and queries, including:
 
 - Geometric recovery for sphere/capsule/box/cylinder/convex shapes against
-  primitives, slopes, trimeshes, flat heightfields and world boundaries.
+  primitives, slopes, trimeshes, heightmap resources and world boundaries.
+- Centered heightmap bounds, non-flat heights/cell diagonals, body/attachment
+  rotations, rigid support and NaN holes. The [heightmap adapter](heightmap-geometry.md)
+  uses a static mesh fallback, not Box3D's compressed native heightfield path.
 - Compound shape indices/transforms, disabled slots, competing floor/wall
   normals, collision priority and per-call body/object exclusions.
 - Read-only motion queries, margin shells, separation-ray recovery/casting,
@@ -40,9 +43,13 @@ it is not a device-performance or memory-growth qualification.
 3. Validate each embedding host's exact static template and matching native
    authority before changing its immutable dependency pin. The static archives
    alone are not runtime or whole-deployment proof.
-4. Extend terrain checks to centered, rotated and non-flat heightfields, slopes
-   near the floor-angle limit, stairs/ledge transitions and platform detach/jump.
-   The current flat-heightfield fixtures do not certify resource-origin parity.
+   The [optional worker-host readback patch](web-worker-readback.md) has recorded
+   desktop coverage on its stated source commit; it does not certify a newer
+   physics pin, mobile devices or the host's Firefox cold-start budget.
+4. Extend character traversal to rough/rotated heightmaps and holes, slopes near
+   the floor-angle limit, stairs/ledge transitions and platform detach/jump.
+   The heightmap geometry checks validate surface placement, not every character
+   transition or the memory/construction cost of large terrain meshes.
 5. Address remaining adapter/API gaps for a named consumer, especially
    `collide_shape()` penetration-depth pairs. Keep unsupported dynamic concave
    bodies, concave sensor visitors, non-uniform scaling, soft bodies and unmapped
