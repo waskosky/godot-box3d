@@ -664,10 +664,8 @@ bool Box3DPhysicsDirectSpaceState3D::test_body_motion(
 			const bool is_separation_ray = shape->get_type() == PhysicsServer3D::SHAPE_SEPARATION_RAY;
 			const auto* ray = is_separation_ray ? static_cast<const Box3DSeparationRayShapeImpl3D*>(shape) : nullptr;
 			if (ray != nullptr) {
-				if (!p_collide_separation_ray && !ray->get_slide_on_slope()) {
-					continue;
-				}
-
+				// Godot only gates the requested cast on collide_separation_ray.
+				// Embedded ray endpoints always participate in initial recovery.
 				found_supported_shape = true;
 				const Transform3D shape_transform = recovered_transform * p_body.get_shape_transform(i);
 				const Vector3 ray_vector = shape_transform.basis.get_column(2) * ray->get_length();
