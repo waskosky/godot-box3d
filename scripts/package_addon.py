@@ -175,6 +175,10 @@ def main() -> int:
             REPO_ROOT / "WEB_QUICKSTART.md", addon / "WEB_QUICKSTART.md",
             allow_missing=False, missing=missing,
         )
+        copy_required(
+            REPO_ROOT / "dependencies.lock", addon / "dependencies.lock",
+            allow_missing=False, missing=missing,
+        )
 
         included_binaries: list[dict[str, str | int]] = []
         for platform in selected:
