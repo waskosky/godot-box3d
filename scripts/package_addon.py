@@ -207,6 +207,10 @@ def main() -> int:
         web_templates: list[dict[str, str | int]] = []
         if args.mode == "bundle":
             copy_required(REPO_ROOT / "docs", staging / "docs", allow_missing=False, missing=missing)
+            copy_required(
+                REPO_ROOT / "scripts/serve_web_export.py", staging / "scripts/serve_web_export.py",
+                allow_missing=False, missing=missing,
+            )
             for filename in (
                 "WEB_QUICKSTART.md",
                 "README.md",

@@ -30,6 +30,7 @@ def free_port() -> int:
 def required_checks(lines: list[str]) -> dict[str, bool]:
     return {
         "backend": any("Requested backend: Box3D Physics" in line for line in lines),
+        "active_backend": "Active backend: Box3DPhysicsServer3D" in lines,
         "extension": any("Extension class registered: true" in line for line in lines),
         "separation_ray": any("Separation ray motion query: PASS" in line for line in lines),
         "character_support": "Idle/moving character rigid-load support: PASS" in lines,

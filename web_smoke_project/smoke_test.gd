@@ -40,6 +40,7 @@ func _ready() -> void:
     _append_status("Platform: %s" % OS.get_name())
     _append_status("Requested backend: %s" % ProjectSettings.get_setting("physics/3d/physics_engine", ""))
     _append_status("Extension class registered: %s" % ClassDB.class_exists(&"Box3DPhysicsServer3D"))
+    _append_status("Active backend: %s" % PhysicsServer3D.get_class())
 
     _create_camera_and_light()
     _create_ground()
@@ -412,6 +413,8 @@ func _run_checks() -> void:
     )
 
     var failures: Array[String] = []
+    if PhysicsServer3D.get_class() != "Box3DPhysicsServer3D":
+        failures.append("Box3D was requested but is not the active physics server")
     var direct_queries_ok := _check_direct_queries()
     if not direct_queries_ok:
         failures.append("Direct queries returned incorrect contact geometry, margins or ray options")
