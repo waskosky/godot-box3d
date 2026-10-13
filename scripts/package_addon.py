@@ -206,6 +206,8 @@ def main() -> int:
             for filename in (
                 "WEB_QUICKSTART.md",
                 "README.md",
+                "LICENSE",
+                "THIRD_PARTY_NOTICES.md",
                 "dependencies.lock",
             ):
                 source = REPO_ROOT / filename
