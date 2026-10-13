@@ -28,16 +28,26 @@ So an `Area3D` silently ignores a body whose shape is a trimesh or heightmap: no
 
 If you need a body to be detected by an area, give it a convex shape. A trimesh may still be used *as* an `Area3D`'s own shape to detect convex bodies passing through it.
 
-## `collide_shape()` currently reports contact points without penetration depth
+## Direct query contacts and rays
 
-This adapter currently implements this query using GJK witness points, which do
-not provide penetration depth. Box3D also exposes penetration manifolds; the
-character overlap-recovery path uses them, but `collide_shape()` has not yet
-been migrated. This is an adapter gap, not an inherent Box3D limitation.
+`collide_shape()` uses native contact manifolds for convex queries against live
+primitive, mesh and heightmap fixtures. It returns world-space pairs with the
+query-surface point first and target-surface point second. Overlapping pairs
+encode the penetration vector; positive-distance contacts within a query margin
+use closest surface points. Result caps, collision masks and exclusions apply.
 
-For a genuinely overlapping pair, both returned points are the same witness point, so the pair's separation reads as zero. Godot's built-in physics returns two points whose distance is the penetration depth.
+`get_rest_info()` selects the deepest contact, reports a target-surface point and
+outward normal, and includes angular motion in the target's contact velocity.
+It checks the supplied pose and ignores `motion`. These queries are read-only.
+`cast_motion()` honors margin and backs its safe fraction off by native linear
+slop; safe and unsafe fractions need not be identical.
 
-Whether shapes overlap, which bodies they are, `max_results`, and `collision_mask` all behave normally. Use it to answer "is anything here, and roughly where" rather than "how deep".
+Ray queries honor `hit_from_inside`. Concave ray hits report the original input
+triangle index, rather than the reordered native BVH index. A backface ray hit
+requires both `hit_back_faces` and the concave resource's `backface_collision`;
+heightmap rays use the query's backface flag. This ray support does not make
+Box3D's simulated concave fixtures two-sided: their physical contacts and
+character recovery remain one-sided.
 
 ## Shape queries need a convex query shape
 

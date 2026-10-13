@@ -7,12 +7,14 @@
 #include "../objects/box3d_body_impl_3d.hpp"
 #include "../objects/box3d_shaped_object_impl_3d.hpp"
 #include "../servers/box3d_physics_server_3d.hpp"
+#include "../shapes/box3d_concave_polygon_shape_impl_3d.hpp"
 #include "../shapes/box3d_separation_ray_shape_impl_3d.hpp"
 #include "../shapes/box3d_shape_impl_3d.hpp"
 #include "box3d_query_filter_3d.hpp"
 #include "box3d_space_3d.hpp"
 
 #include <box3d/box3d.h>
+#include <box3d/collision.h>
 
 #include <godot_cpp/templates/local_vector.hpp>
 
@@ -67,20 +69,21 @@ bool overlap_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	return true;
 }
 
-struct CollideShapeContext {
+struct ContactQueryContext {
 	const Box3DQueryFilter3D* filter = nullptr;
-	const b3ShapeProxy* query_proxy = nullptr;
+	const Box3DContactQuery3D* geometry = nullptr;
+	b3Transform transform = b3Transform_identity;
+	float margin = 0.0f;
 	Vector3* results = nullptr;
+	PhysicsServer3DExtensionShapeRestInfo* rest = nullptr;
+	float best_separation = FLT_MAX;
 	int32_t max_results = 0;
 	int32_t count = 0;
 };
 
-// Reports the closest points between the query shape and one overlapping shape. Godot wants
-// world-space pairs, and b3ShapeDistance runs in frame A, which is world space here because
-// Box3DShapeProxy3D already bakes the transform into its points.
-bool collide_shape_result_fcn(b3ShapeId p_shape_id, void* p_context) {
-	auto* ctx = static_cast<CollideShapeContext*>(p_context);
-	if (ctx->count >= ctx->max_results) {
+bool contact_query_result_fcn(b3ShapeId p_shape_id, void* p_context) {
+	auto* ctx = static_cast<ContactQueryContext*>(p_context);
+	if (ctx->rest == nullptr && ctx->count >= ctx->max_results) {
 		return false;
 	}
 
@@ -90,34 +93,47 @@ bool collide_shape_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 		return true;
 	}
 
-	const Transform3D object_transform = object->get_transform();
-	for (int32_t i = 0; i < object->get_shape_count(); i++) {
-		if (!object->has_shape_id(i) || !B3_ID_EQUALS(object->get_shape_id(i), p_shape_id)) {
+	LocalVector<Box3DRecoveryContact> contacts;
+	ctx->geometry->contacts(ctx->transform, p_shape_id, ctx->margin, contacts);
+	for (const Box3DRecoveryContact& contact : contacts) {
+		// Native manifolds store the midpoint and signed surface separation.
+		const b3Vec3 query_point = b3MulAdd(contact.point, 0.5f * contact.separation, contact.normal);
+		const b3Vec3 target_point = b3MulAdd(contact.point, -0.5f * contact.separation, contact.normal);
+		if (ctx->rest != nullptr) {
+			if (contact.separation >= ctx->best_separation) {
+				continue;
+			}
+			ctx->best_separation = contact.separation;
+			ctx->rest->point = b3_to_godot(target_point);
+			ctx->rest->normal = b3_to_godot(contact.normal);
+			ctx->rest->rid = object->get_rid();
+			ctx->rest->collider_id = object->get_instance_id();
+			ctx->rest->shape = object->find_shape_index(p_shape_id);
+			ctx->rest->linear_velocity = dynamic_cast<Box3DBodyImpl3D*>(object) ?
+					b3_to_godot(b3Body_GetWorldPointVelocity(body_id, target_point)) : Vector3();
+			ctx->count = 1;
 			continue;
 		}
-
-		const Box3DShapeProxy3D other_proxy(object->get_shape(i), object_transform * object->get_shape_transform(i));
-		if (!other_proxy.is_supported()) {
-			return true;
-		}
-
-		b3DistanceInput input{};
-		input.proxyA = *ctx->query_proxy;
-		input.proxyB = other_proxy.get_proxy();
-		input.transform = b3Transform_identity;
-		input.useRadii = true;
-
-		b3SimplexCache cache{};
-		const b3DistanceOutput output = b3ShapeDistance(&input, &cache, nullptr, 0);
-
-		// GJK cannot recover penetration depth, so an overlapping pair reports its witness
-		// point for both sides rather than a fabricated depth.
-		ctx->results[ctx->count * 2 + 0] = b3_to_godot(output.pointA);
-		ctx->results[ctx->count * 2 + 1] = b3_to_godot(output.pointB);
+		ctx->results[ctx->count * 2 + 0] = b3_to_godot(query_point);
+		ctx->results[ctx->count * 2 + 1] = b3_to_godot(target_point);
 		ctx->count++;
-		return true;
+		if (ctx->count >= ctx->max_results) {
+			return false;
+		}
 	}
 	return true;
+}
+
+b3AABB proxy_bounds(const b3ShapeProxy& p_proxy, float p_margin) {
+	b3Vec3 lower = p_proxy.points[0];
+	b3Vec3 upper = lower;
+	for (int i = 1; i < p_proxy.count; i++) {
+		lower = b3Min(lower, p_proxy.points[i]);
+		upper = b3Max(upper, p_proxy.points[i]);
+	}
+	const float radius = p_proxy.radius + p_margin;
+	const b3Vec3 inflation{radius, radius, radius};
+	return {b3Sub(lower, inflation), b3Add(upper, inflation)};
 }
 
 struct RayContext {
@@ -128,14 +144,30 @@ struct RayContext {
 	b3Pos point{};
 	b3Vec3 normal{};
 	float fraction = 1.0f;
+	int32_t face_index = -1;
+	b3Vec3 origin{};
+	b3Vec3 translation{};
 };
 
-float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, float p_fraction, uint64_t, int, int, void* p_context) {
+int32_t input_face_index(b3ShapeId p_shape_id, Box3DShapedObjectImpl3D* p_object, int p_triangle) {
+	const int32_t slot = p_object->find_shape_index(p_shape_id);
+	if (p_triangle < 0 || slot < 0 || p_object->get_shape(slot)->get_type() != PhysicsServer3D::SHAPE_CONCAVE_POLYGON) {
+		return -1;
+	}
+	const b3Mesh mesh = b3Shape_GetMesh(p_shape_id);
+	// The BVH reorders triangles. Unwelded vertices keep their input face groups.
+	return b3GetMeshTriangles(mesh.data)[p_triangle].index1 / 3;
+}
+
+float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, float p_fraction, uint64_t, int p_triangle, int, void* p_context) {
 	auto* ctx = static_cast<RayContext*>(p_context);
 
 	const b3BodyId body_id = b3Shape_GetBody(p_shape_id);
 	Box3DShapedObjectImpl3D* object = nullptr;
 	if (!should_report(b3Body_GetUserData(body_id), *ctx->filter, object)) {
+		return -1.0f;
+	}
+	if (!ctx->hit_from_inside && p_fraction == 0.0f && b3LengthSquared(p_normal) < 1e-10f) {
 		return -1.0f;
 	}
 
@@ -144,7 +176,79 @@ float cast_result_fcn(b3ShapeId p_shape_id, b3Pos p_point, b3Vec3 p_normal, floa
 	ctx->point = p_point;
 	ctx->normal = p_normal;
 	ctx->fraction = p_fraction;
+	ctx->face_index = input_face_index(p_shape_id, object, p_triangle);
 	return p_fraction;
+}
+
+struct MeshRayContext {
+	RayContext* ray;
+	Box3DShapedObjectImpl3D* object;
+	b3ShapeId shape;
+	b3Transform transform;
+	b3Vec3 origin;
+	b3Vec3 translation;
+};
+
+bool mesh_ray_triangle(b3Vec3 p_a, b3Vec3 p_b, b3Vec3 p_c, int p_triangle, void* p_context) {
+	auto& ctx = *static_cast<MeshRayContext*>(p_context);
+	const b3Vec3 edge1 = b3Sub(p_b, p_a);
+	const b3Vec3 edge2 = b3Sub(p_c, p_a);
+	const b3Vec3 cross = b3Cross(ctx.translation, edge2);
+	const float determinant = b3Dot(edge1, cross);
+	if (Math::abs(determinant) < 1e-8f) {
+		return true;
+	}
+	const b3Vec3 offset = b3Sub(ctx.origin, p_a);
+	const float u = b3Dot(offset, cross) / determinant;
+	const b3Vec3 q = b3Cross(offset, edge1);
+	const float v = b3Dot(ctx.translation, q) / determinant;
+	const float fraction = b3Dot(edge2, q) / determinant;
+	if (u < 0.0f || v < 0.0f || u + v > 1.0f || fraction < 0.0f || fraction > ctx.ray->fraction) {
+		return true;
+	}
+	b3Vec3 normal = b3Normalize(b3Cross(edge2, edge1));
+	if (b3Dot(normal, ctx.translation) > 0.0f) {
+		normal = b3Neg(normal);
+	}
+	ctx.ray->has_hit = true;
+	ctx.ray->shape_id = ctx.shape;
+	ctx.ray->fraction = fraction;
+	ctx.ray->point = b3MulAdd(ctx.ray->origin, fraction, ctx.ray->translation);
+	ctx.ray->normal = b3RotateVector(ctx.transform.q, normal);
+	ctx.ray->face_index = input_face_index(ctx.shape, ctx.object, p_triangle);
+	return true;
+}
+
+bool backface_ray_result_fcn(b3ShapeId p_shape_id, void* p_context) {
+	auto& ray = *static_cast<RayContext*>(p_context);
+	if (b3Shape_GetType(p_shape_id) != b3_meshShape) {
+		return true;
+	}
+	Box3DShapedObjectImpl3D* object = nullptr;
+	const b3BodyId body = b3Shape_GetBody(p_shape_id);
+	if (!should_report(b3Body_GetUserData(body), *ray.filter, object)) {
+		return true;
+	}
+	const int32_t slot = object->find_shape_index(p_shape_id);
+	if (slot < 0) {
+		return true;
+	}
+	const auto* shape = object->get_shape(slot);
+	if (shape->get_type() == PhysicsServer3D::SHAPE_CONCAVE_POLYGON) {
+		if (!static_cast<const Box3DConcavePolygonShapeImpl3D*>(shape)->is_backface_collision_enabled()) {
+			return true;
+		}
+	} else if (shape->get_type() != PhysicsServer3D::SHAPE_HEIGHTMAP) {
+		return true;
+	}
+	const b3Transform transform = b3Body_GetTransform(body);
+	MeshRayContext ctx{&ray, object, p_shape_id, transform,
+			b3InvTransformPoint(transform, ray.origin), b3InvRotateVector(transform.q, ray.translation)};
+	const b3Vec3 end = b3MulAdd(ctx.origin, ray.fraction, ctx.translation);
+	const b3AABB bounds{b3Min(ctx.origin, end), b3Max(ctx.origin, end)};
+	const b3Mesh mesh = b3Shape_GetMesh(p_shape_id);
+	b3QueryMesh(&mesh, bounds, mesh_ray_triangle, &ctx);
+	return true;
 }
 
 struct MotionCollisionData {
@@ -365,8 +469,15 @@ bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(
 
 	const b3Vec3 origin = godot_to_b3(p_from);
 	const b3Vec3 translation = godot_to_b3(p_to - p_from);
+	context.origin = origin;
+	context.translation = translation;
 
 	b3World_CastRay(space->get_world_id(), origin, translation, filter.filter, cast_result_fcn, &context);
+	if (p_hit_back_faces) {
+		const b3Vec3 end = b3MulAdd(origin, context.fraction, translation);
+		b3World_OverlapAABB(space->get_world_id(), {b3Min(origin, end), b3Max(origin, end)},
+				filter.filter, backface_ray_result_fcn, &context);
+	}
 
 	if (!context.has_hit) {
 		return false;
@@ -384,6 +495,7 @@ bool Box3DPhysicsDirectSpaceState3D::_intersect_ray(
 	p_result->collider_id = object->get_instance_id();
 	p_result->collider = object->get_instance_unsafe();
 	p_result->shape = object->find_shape_index(context.shape_id);
+	p_result->face_index = context.face_index;
 	return true;
 }
 
@@ -430,7 +542,7 @@ int32_t Box3DPhysicsDirectSpaceState3D::_intersect_shape(
 	Box3DShapeImpl3D* shape = Box3DPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
 	ERR_FAIL_NULL_V(shape, 0);
 
-	const Box3DShapeProxy3D shape_proxy(shape, p_transform);
+	const Box3DShapeProxy3D shape_proxy(shape, p_transform, p_margin);
 	if (!shape_proxy.is_supported()) {
 		return 0;
 	}
@@ -464,7 +576,7 @@ bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
 	Box3DShapeImpl3D* shape = Box3DPhysicsServer3D::get_singleton()->get_shape(p_shape_rid);
 	ERR_FAIL_NULL_V(shape, false);
 
-	const Box3DShapeProxy3D shape_proxy(shape, p_transform);
+	const Box3DShapeProxy3D shape_proxy(shape, p_transform, p_margin);
 	if (!shape_proxy.is_supported()) {
 		*p_closest_safe = 1.0;
 		*p_closest_unsafe = 1.0;
@@ -485,7 +597,9 @@ bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
 		return false;
 	}
 
-	*p_closest_safe = context.fraction;
+	const float motion_length = (float)p_motion.length();
+	*p_closest_safe = motion_length > CMP_EPSILON ?
+			MAX(0.0f, context.fraction - B3_LINEAR_SLOP / motion_length) : context.fraction;
 	*p_closest_unsafe = context.fraction;
 	return true;
 }
@@ -518,14 +632,18 @@ bool Box3DPhysicsDirectSpaceState3D::_collide_shape(
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
 	filter.direct_state = this;
 
-	CollideShapeContext context;
+	const Box3DShapeProxy3D local_proxy(shape, Transform3D());
+	const Box3DContactQuery3D geometry(local_proxy.get_proxy());
+	ContactQueryContext context;
 	context.filter = &filter;
-	context.query_proxy = &shape_proxy.get_proxy();
+	context.geometry = &geometry;
+	context.transform = godot_to_b3_transform(p_transform);
+	context.margin = MAX(0.0f, (float)p_margin);
 	context.results = static_cast<Vector3*>(p_results);
 	context.max_results = p_max_results;
 
-	b3World_OverlapShape(
-			space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), filter.filter, collide_shape_result_fcn, &context);
+	b3World_OverlapAABB(space->get_world_id(), proxy_bounds(shape_proxy.get_proxy(), context.margin),
+			filter.filter, contact_query_result_fcn, &context);
 
 	*p_result_count = context.count;
 	return context.count > 0;
@@ -553,33 +671,18 @@ bool Box3DPhysicsDirectSpaceState3D::_rest_info(
 	Box3DQueryFilter3D filter(p_collision_mask, p_collide_with_bodies, p_collide_with_areas);
 	filter.direct_state = this;
 
-	RayContext context;
+	const Box3DShapeProxy3D local_proxy(shape, Transform3D());
+	const Box3DContactQuery3D geometry(local_proxy.get_proxy());
+	ContactQueryContext context;
 	context.filter = &filter;
+	context.geometry = &geometry;
+	context.transform = godot_to_b3_transform(p_transform);
+	context.margin = MAX(0.0f, (float)p_margin);
+	context.rest = p_info;
 
-	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion), filter.filter, cast_result_fcn, &context);
-
-	if (!context.has_hit) {
-		return false;
-	}
-
-	const b3BodyId body_id = b3Shape_GetBody(context.shape_id);
-	auto* object = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(body_id));
-	if (object == nullptr) {
-		return false;
-	}
-
-	p_info->point = b3_to_godot(context.point);
-	p_info->normal = b3_to_godot(context.normal);
-	p_info->rid = object->get_rid();
-	p_info->collider_id = object->get_instance_id();
-	p_info->shape = object->find_shape_index(context.shape_id);
-
-	auto* body = dynamic_cast<Box3DBodyImpl3D*>(object);
-	if (body != nullptr) {
-		p_info->linear_velocity = body->get_linear_velocity();
-	}
-
-	return true;
+	b3World_OverlapAABB(space->get_world_id(), proxy_bounds(shape_proxy.get_proxy(), context.margin),
+			filter.filter, contact_query_result_fcn, &context);
+	return context.count > 0;
 }
 
 Vector3 Box3DPhysicsDirectSpaceState3D::_get_closest_point_to_object_volume(const RID& p_object, const Vector3& p_point) const {
@@ -815,8 +918,34 @@ bool Box3DPhysicsDirectSpaceState3D::test_body_motion(
 		}
 	}
 	if (recovered && p_recovery_as_collision) {
+		Transform3D end_transform = recovered_transform;
+		end_transform.origin += p_motion * unsafe_fraction;
 		for (const MotionCollisionData& collision : recovery_collisions) {
-			append_motion_collision(reported_collisions, collision);
+			// Recovery displacement still applies, but an initial floor contact
+			// must not keep a jumping character grounded after it has separated.
+			if (p_body.has_shape_id(collision.local_shape) && collision.object->has_shape_id(collision.collider_shape)) {
+				LocalVector<Box3DRecoveryContact> end_contacts;
+				box3d_recovery_contacts(p_body.get_shape_id(collision.local_shape), godot_to_b3_transform(end_transform),
+						collision.object->get_shape_id(collision.collider_shape), (float)margin + B3_LINEAR_SLOP + 1e-4f, end_contacts);
+				for (const Box3DRecoveryContact& contact : end_contacts) {
+					if (b3_to_godot(contact.normal).dot(collision.normal) > 0.99f) {
+						append_motion_collision(reported_collisions, collision);
+						break;
+					}
+				}
+			} else if (p_body.get_shape(collision.local_shape)->get_type() == PhysicsServer3D::SHAPE_SEPARATION_RAY) {
+				const auto* ray = static_cast<const Box3DSeparationRayShapeImpl3D*>(p_body.get_shape(collision.local_shape));
+				const Transform3D ray_transform = end_transform * p_body.get_shape_transform(collision.local_shape);
+				const Vector3 ray_vector = ray_transform.basis.get_column(2) * ray->get_length();
+				RayContext ray_context;
+				ray_context.filter = &filter;
+				b3World_CastRay(space->get_world_id(), godot_to_b3(ray_transform.origin),
+						godot_to_b3(ray_vector + ray_vector.normalized() * margin), filter.filter, cast_result_fcn, &ray_context);
+				if (ray_context.has_hit && ray_context.fraction < 1.0f &&
+						B3_ID_EQUALS(ray_context.shape_id, collision.object->get_shape_id(collision.collider_shape))) {
+					append_motion_collision(reported_collisions, collision);
+				}
+			}
 		}
 	}
 
@@ -841,5 +970,5 @@ bool Box3DPhysicsDirectSpaceState3D::test_body_motion(
 	}
 	p_result->collision_count = collision_limit;
 
-	return found_collision || (recovered && p_recovery_as_collision);
+	return found_collision || !reported_collisions.is_empty();
 }

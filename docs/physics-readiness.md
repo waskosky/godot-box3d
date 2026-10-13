@@ -19,6 +19,10 @@ The native suite exercises actual Godot bodies and queries, including:
   grounded terrain traversal and rigid loads on idle/moving characters.
 - Animated kinematic platform carry, clean stops and small linear/angular
   targets; motion collisions report the platform's velocity.
+- Direct-query penetration pairs, mesh/heightmap targets, margins, rest normals
+  and rotating contact velocity; ray inside/backface flags and input face indices.
+- Floor-angle classification, descending steps, rough rotated heightmaps,
+  hole-boundary falls and moving/rotating platform jump detachment.
 - CCD against a thin wall, rotated off-center impulse/inertia, sleep/wake,
   sustained finite states and repeated body creation/removal.
 
@@ -46,15 +50,16 @@ it is not a device-performance or memory-growth qualification.
    The [optional worker-host readback patch](web-worker-readback.md) has recorded
    desktop coverage on its stated source commit; it does not certify a newer
    physics pin, mobile devices or the host's Firefox cold-start budget.
-4. Extend character traversal to rough/rotated heightmaps and holes, slopes near
-   the floor-angle limit, stairs/ledge transitions and platform detach/jump.
-   The heightmap geometry checks validate surface placement, not every character
-   transition or the memory/construction cost of large terrain meshes.
-5. Address remaining adapter/API gaps for a named consumer, especially
-   `collide_shape()` penetration-depth pairs. Keep unsupported dynamic concave
+4. Qualify the actual game's controller and terrain sizes. Focused transition
+   regressions do not certify arbitrary stair-climbing behavior or the
+   memory/construction cost of large terrain meshes.
+5. Address remaining adapter/API gaps for a named consumer. Keep unsupported dynamic concave
    bodies, concave sensor visitors, non-uniform scaling, soft bodies and unmapped
    joint parameters explicit; do not imply support from unrelated passing tests.
 
 Keep regressions focused on observable physics behavior. Add a small reproduction
 for each new failure rather than expanding a generic test framework or declaring
 all Godot/Box3D behavior equivalent.
+
+Use the [release qualification guide](release-qualification.md) to record one
+candidate's exact artifacts, target devices and measured budgets.

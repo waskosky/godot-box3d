@@ -115,7 +115,10 @@ by idle/moving characters, characters stay grounded on slopes/mesh/heightfield
 terrain, and an animated platform carries its character then stops cleanly.
 The heightmap character starts in the grid's negative half and crosses its
 center, so a corner-origin collision surface cannot satisfy the terrain check.
-The Web workflow runs this release-export smoke test in headless Chromium before it packages the bundle.
+Direct-query checks also require correct penetration pairs, rest normals,
+margin handling, ray inside/backface flags and mesh face indices. The Web
+workflow runs this release-export smoke test in headless Chromium before it
+packages the bundle.
 
 For desktop Firefox and WebKit sanity checks, install those Playwright browsers
 and run the same exported scene:
@@ -133,6 +136,20 @@ startup or frame-rate budget. A local Firefox qualification may need
 that longer window; it does not count as meeting a cold-start performance budget.
 Desktop WebKit and touch emulation do not certify physical
 iPhone/Safari or Android devices.
+
+For a bounded desktop reload check, use the same browser context for 20 extra
+loads and watch for errors for another minute:
+
+```bash
+.venv/bin/python scripts/run_web_smoke.py --dir build/web-smoke-release \
+  --reloads 20 --observe-seconds 60
+```
+
+Every load must pass all physics checks. `seconds_to_physics_pass` includes the
+scene's 180-frame simulation: it is not a first-frame startup measurement.
+Post-PASS observation catches browser/engine errors, not memory growth or a
+gameplay/frame-pacing budget. See [release qualification](docs/release-qualification.md)
+for those separate gates.
 
 ## Important compatibility rules
 

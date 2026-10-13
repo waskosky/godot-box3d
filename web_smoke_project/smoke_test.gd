@@ -48,6 +48,7 @@ func _ready() -> void:
     _create_character_supports()
     _create_terrain_characters()
     _create_moving_platform()
+    _create_query_targets()
     _run_checks()
 
 
@@ -132,6 +133,65 @@ func _create_moving_platform() -> void:
     rider_visual.mesh = rider_mesh
     _platform_rider.add_child(rider_visual)
     add_child(_platform_rider)
+
+
+func _create_query_targets() -> void:
+    for index in 2:
+        var body := StaticBody3D.new()
+        body.position.x = 30.0 + index * 10.0
+        body.collision_layer = 32
+        body.collision_mask = 0
+        if index == 0:
+            body.add_child(_box_collision(Vector3.ONE))
+        else:
+            var collision := CollisionShape3D.new()
+            var mesh := BoxMesh.new()
+            mesh.size = Vector3.ONE
+            var shape := mesh.create_trimesh_shape()
+            shape.backface_collision = true
+            collision.shape = shape
+            body.add_child(collision)
+        add_child(body)
+
+
+func _check_direct_queries() -> bool:
+    var state := get_world_3d().direct_space_state
+    var query := PhysicsShapeQueryParameters3D.new()
+    query.collision_mask = 32
+    var box := BoxShape3D.new()
+    box.size = Vector3.ONE
+    query.shape = box
+    query.transform.origin = Vector3(30.6, 0, 0)
+    var pairs := state.collide_shape(query)
+    var ok := pairs.size() >= 2 and (pairs[1] - pairs[0]).distance_to(Vector3(0.4, 0, 0)) < 0.02
+    var sphere := SphereShape3D.new()
+    sphere.radius = 0.25
+    query.shape = sphere
+    query.transform.origin.x = 40.6
+    pairs = state.collide_shape(query)
+    ok = ok and pairs.size() >= 2 and (pairs[1] - pairs[0]).distance_to(Vector3(0.15, 0, 0)) < 0.02
+    query.transform.origin.x = 30.6
+    var rest := state.get_rest_info(query)
+    ok = ok and rest.get("normal", Vector3.ZERO).distance_to(Vector3.RIGHT) < 0.01
+    query.transform.origin.x = 32.0
+    query.motion = Vector3(-3, 0, 0)
+    ok = ok and state.get_rest_info(query).is_empty()
+    query.motion = Vector3.ZERO
+    query.transform.origin.x = 30.8
+    query.margin = 0.1
+    ok = ok and not state.intersect_shape(query).is_empty()
+    query.transform.origin.x = 32.0
+    query.motion = Vector3(-2, 0, 0)
+    ok = ok and absf(state.cast_motion(query)[0] - 0.575) < 0.001
+    var ray := PhysicsRayQueryParameters3D.create(Vector3(30, 0, 0), Vector3(32, 0, 0), 32)
+    ray.hit_from_inside = false
+    ok = ok and state.intersect_ray(ray).is_empty()
+    ray.from.x = 40.0
+    ray.to.x = 42.0
+    ray.hit_back_faces = true
+    var hit := state.intersect_ray(ray)
+    ok = ok and hit.get("face_index", -1) >= 0 and hit.get("normal", Vector3.ZERO).distance_to(Vector3.LEFT) < 0.01
+    return ok
 
 
 func _create_terrain_characters() -> void:
@@ -352,6 +412,9 @@ func _run_checks() -> void:
     )
 
     var failures: Array[String] = []
+    var direct_queries_ok := _check_direct_queries()
+    if not direct_queries_ok:
+        failures.append("Direct queries returned incorrect contact geometry, margins or ray options")
     for fixture in _terrain:
         print("Terrain %d: progress=%.3f grounded=%d height_error=%.4f" % [fixture.kind, fixture.body.position.x - fixture.start, fixture.grounded, fixture.max_height_error])
         if fixture.body.position.x - fixture.start < 0.5 or fixture.grounded < 170:
@@ -405,6 +468,7 @@ func _run_checks() -> void:
     _append_status("Slope/terrain character movement: %s" % ("PASS" if _terrain_ok else "FAIL"))
     _append_status("Separation ray recovery without casting: %s" % ("PASS" if embedded_ok else "FAIL"))
     _append_status("Animated platform character support: %s" % ("PASS" if _platform_ok else "FAIL"))
+    _append_status("Direct query geometry/options: %s" % ("PASS" if direct_queries_ok else "FAIL"))
     _append_status("Six character queries: %.1f us/frame average" % (float(_physics_usec) / maxi(_physics_frames, 1)))
 
     if failures.is_empty():

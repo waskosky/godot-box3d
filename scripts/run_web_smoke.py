@@ -27,6 +27,20 @@ def free_port() -> int:
         return int(sock.getsockname()[1])
 
 
+def required_checks(lines: list[str]) -> dict[str, bool]:
+    return {
+        "backend": any("Requested backend: Box3D Physics" in line for line in lines),
+        "extension": any("Extension class registered: true" in line for line in lines),
+        "separation_ray": any("Separation ray motion query: PASS" in line for line in lines),
+        "character_support": "Idle/moving character rigid-load support: PASS" in lines,
+        "terrain_motion": "Slope/terrain character movement: PASS" in lines,
+        "ray_recovery": "Separation ray recovery without casting: PASS" in lines,
+        "moving_platform": "Animated platform character support: PASS" in lines,
+        "direct_queries": "Direct query geometry/options: PASS" in lines,
+        "physics": "RESULT: PASS" in lines,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the exported Box3D Web smoke scene.")
     parser.add_argument("--dir", default="build/web-smoke")
@@ -34,7 +48,11 @@ def main() -> int:
     parser.add_argument("--browser", choices=("chromium", "firefox", "webkit"), default="chromium")
     parser.add_argument("--screenshot", default="")
     parser.add_argument("--timeout", type=float, default=45.0)
+    parser.add_argument("--reloads", type=int, default=0, help="Additional page loads in the same browser context.")
+    parser.add_argument("--observe-seconds", type=float, default=0.0, help="Watch for errors after the final PASS; not a performance or memory qualification.")
     args = parser.parse_args()
+    if args.reloads < 0 or args.observe_seconds < 0 or args.timeout <= 0:
+        parser.error("reloads/observe-seconds must be nonnegative and timeout must be positive")
 
     try:
         from playwright.sync_api import sync_playwright
@@ -60,6 +78,7 @@ def main() -> int:
 
     console_lines: list[str] = []
     errors: list[str] = []
+    loads: list[dict[str, object]] = []
     try:
         with sync_playwright() as playwright:
             launch_options: dict[str, object] = {"headless": True}
@@ -82,14 +101,24 @@ def main() -> int:
 
             page.on("console", handle_console)
             page.on("pageerror", lambda error: errors.append(f"pageerror: {error}"))
-            response = page.goto(
-                f"http://127.0.0.1:{port}/index.html",
-                wait_until="domcontentloaded",
-                timeout=int(args.timeout * 1000),
-            )
-            deadline = time.monotonic() + args.timeout
-            while "RESULT: PASS" not in console_lines and time.monotonic() < deadline:
-                page.wait_for_timeout(100)
+            for attempt in range(args.reloads + 1):
+                console_lines.clear()
+                errors.clear()
+                started = time.monotonic()
+                response = page.goto(
+                    f"http://127.0.0.1:{port}/index.html",
+                    wait_until="domcontentloaded",
+                    timeout=int(args.timeout * 1000),
+                )
+                deadline = started + args.timeout
+                while "RESULT: PASS" not in console_lines and not errors and time.monotonic() < deadline:
+                    page.wait_for_timeout(100)
+                passed = bool(response and response.ok) and all(required_checks(console_lines).values()) and not errors
+                loads.append({"load": attempt, "seconds_to_physics_pass": round(time.monotonic() - started, 3), "ok": passed})
+                if not passed:
+                    break
+            if loads[-1]["ok"] and args.observe_seconds:
+                page.wait_for_timeout(args.observe_seconds * 1000)
 
             if args.screenshot:
                 screenshot = Path(args.screenshot)
@@ -100,20 +129,13 @@ def main() -> int:
         server.shutdown()
         server.server_close()
 
-    required = {
-        "backend": any("Requested backend: Box3D Physics" in line for line in console_lines),
-        "extension": any("Extension class registered: true" in line for line in console_lines),
-        "separation_ray": any("Separation ray motion query: PASS" in line for line in console_lines),
-        "character_support": "Idle/moving character rigid-load support: PASS" in console_lines,
-        "terrain_motion": "Slope/terrain character movement: PASS" in console_lines,
-        "ray_recovery": "Separation ray recovery without casting: PASS" in console_lines,
-        "moving_platform": "Animated platform character support: PASS" in console_lines,
-        "physics": "RESULT: PASS" in console_lines,
-    }
+    required = required_checks(console_lines)
     result = {
         "browser": args.browser,
-        "ok": bool(response and response.ok) and all(required.values()) and not errors,
+        "ok": len(loads) == args.reloads + 1 and all(load["ok"] for load in loads) and not errors,
         "required": required,
+        "loads": loads,
+        "post_pass_observation_seconds": args.observe_seconds,
         "errors": errors,
         "console_tail": console_lines[-20:],
     }

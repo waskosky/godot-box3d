@@ -39,10 +39,14 @@ The supported no-thread Web profile always uses one worker, regardless of this s
 |---|---|
 | Linux x86_64 | Tested |
 | Windows x86_64 | Tested |
-| Web (wasm32) | Chromium smoke-tested |
+| Web dynamic/no-thread (wasm32) | CI Chromium smoke; local Firefox/WebKit qualification recorded per candidate |
+| Web static/worker host | Host-owned template; qualify exact physics source, patches and compiler flags |
 | macOS arm64/x86_64 | Universal binary; CI runtime-tests the hosted runner architecture |
 
 macOS is a work in progress. Release artifacts contain a universal arm64/x86_64 library and CI runs the headless physics suite on the hosted runner architecture. The other slice is compile-checked only, and the library is not notarized, so Gatekeeper may block it.
+
+Physical Android Chrome and iPhone Safari remain separate acceptance gates.
+See [release qualification](release-qualification.md) before promoting a build.
 
 ## Verifying it loaded
 

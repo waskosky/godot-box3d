@@ -169,6 +169,13 @@ def main() -> int:
             if source.is_file():
                 shutil.copy2(source, addon / filename)
 
+        # Keep the installed README's support and quick-start links usable.
+        copy_required(REPO_ROOT / "docs", addon / "docs", allow_missing=False, missing=missing)
+        copy_required(
+            REPO_ROOT / "WEB_QUICKSTART.md", addon / "WEB_QUICKSTART.md",
+            allow_missing=False, missing=missing,
+        )
+
         included_binaries: list[dict[str, str | int]] = []
         for platform in selected:
             for relative_text in PLATFORM_BINARIES[platform]:
@@ -195,6 +202,7 @@ def main() -> int:
 
         web_templates: list[dict[str, str | int]] = []
         if args.mode == "bundle":
+            copy_required(REPO_ROOT / "docs", staging / "docs", allow_missing=False, missing=missing)
             for filename in (
                 "WEB_QUICKSTART.md",
                 "README.md",

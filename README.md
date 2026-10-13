@@ -79,9 +79,7 @@ are described in [Heightmap geometry](docs/heightmap-geometry.md).
   This diverges from Godot's built-in physics (and Jolt), which report such a body on the first physics frame.
   If you need a body to be detected by an area, give it a convex shape. (A trimesh may still be used *as* an `Area3D`'s own shape to detect convex bodies passing through it.)
 
-- **`collide_shape()` currently reports contact points without penetration depth.** This adapter still uses GJK witness points for that API, not Box3D's penetration manifolds. Character overlap recovery uses the manifolds separately; this query limitation is not an inherent Box3D restriction.
-  For a genuinely overlapping pair both returned points are the same witness point, so the pair's separation reads as zero, where Godot's built-in physics returns two points whose distance is the penetration depth.
-  Whether shapes overlap, which bodies they are, `max_results`, and `collision_mask` all behave normally, so use it to answer "is anything here, and roughly where" rather than "how deep".
+- **Direct shape contacts use native contact geometry.** `collide_shape()` returns surface-point pairs for convex queries against primitives, trimeshes and heightmaps. `get_rest_info()` reports a surface point, normal and velocity at the contact, while ignoring query motion. Query margins are honored. See [Behavior differences](docs/behavior-differences.md) for support boundaries.
 
 - **Shape queries need a convex query shape.** `intersect_shape`, `cast_motion`, `collide_shape`, `rest_info`, and `body_test_motion` build a point-cloud proxy of the shape being queried *with*, and trimesh, heightmap, and world-boundary shapes have no finite point cloud.
   Passing one of those as the query shape returns no results. They work normally as targets in the world.
@@ -174,7 +172,7 @@ The runner builds the extension, registers it, checks the Box3D backend actually
 
 See [Physics readiness](docs/physics-readiness.md) for the validated milestone and remaining acceptance gates.
 
-CI executes that suite with Godot 4.7 on Linux, Windows, and macOS, and separately on the minimum supported Godot 4.3. It also runs the suite under UndefinedBehaviorSanitizer and compile/link checks a Debug build instrumented with AddressSanitizer. Stock Godot binaries use `RTLD_DEEPBIND`, so running an ASan-instrumented GDExtension requires an ASan-built Godot host.
+CI executes that suite with Godot 4.7 on Linux, Windows, and macOS, and separately on the minimum supported Godot 4.3. It also runs the suite under UndefinedBehaviorSanitizer and compile/link checks a Debug build instrumented with AddressSanitizer. Linux Godot binaries use `RTLD_DEEPBIND`, so ASan runtime checks there require a compatible instrumented host. On macOS, a compatible stock host can run an instrumented extension with the matching Clang ASan runtime preloaded; retain that result as a separate qualification receipt.
 
 ## Contributing
 
