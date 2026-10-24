@@ -29,12 +29,14 @@ An embedded `SeparationRayShape3D` endpoint is also recovered when
 `collide_separation_ray=false`; that flag gates the requested-motion cast for
 non-sliding rays, not initial-overlap recovery.
 
-Transform-driven kinematic bodies, including `AnimatableBody3D`, queue their
+Transform-driven kinematic bodies with a state-sync callback, including `AnimatableBody3D`, queue their
 next physics-step target instead of teleporting each animation update. Motion
 collisions report their linear/angular velocity so grounded characters ride
 them. Initial placement is immediate, and stopped animations clear target-driven
 velocity instead of drifting. Explicit velocity-driven kinematic bodies retain
 their separate velocity path.
+Character transforms apply immediately when Godot publishes them; explicitly
+synchronized movement remains visible to subsequent character queries.
 
 The regressions exercise geometric normals and bounded displacement for five
 convex shapes, a large query margin, compound floor/wall contacts, priority in a

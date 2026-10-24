@@ -81,7 +81,7 @@ void Box3DBodyImpl3D::set_mode(BodyMode p_mode) {
 }
 
 void Box3DBodyImpl3D::set_transform(const Transform3D& p_transform) {
-	if (mode == PhysicsServer3D::BODY_MODE_KINEMATIC && has_body_id() && kinematic_transform_initialized) {
+	if (mode == PhysicsServer3D::BODY_MODE_KINEMATIC && has_body_id() && kinematic_transform_initialized && state_sync_callback.is_valid()) {
 		// Transform-driven kinematic bodies need a velocity during the next
 		// simulation step. Teleporting them loses platform carry and can race
 		// their state-sync callback. Multiple writes keep the last target.
@@ -90,6 +90,10 @@ void Box3DBodyImpl3D::set_transform(const Transform3D& p_transform) {
 		target_driven = true;
 		return;
 	}
+	// Characters publish collision-tested transforms directly. Deferring those
+	// writes would hide even explicitly synchronized movement from other queries.
+	kinematic_target_pending = false;
+	target_driven = false;
 	Box3DShapedObjectImpl3D::set_transform(p_transform);
 	kinematic_transform_initialized = mode == PhysicsServer3D::BODY_MODE_KINEMATIC;
 }
