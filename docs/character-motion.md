@@ -15,6 +15,8 @@ a promise of bit-for-bit parity with GodotPhysics3D. A body trapped in a gap
 smaller than itself cannot satisfy both surfaces; recovery remains bounded but
 does not guarantee escape from impossible overlaps.
 
+Motion casts report a hit when shapes would touch, rather than merely approach within Box3D's linear slop. Near-surface movement still detects the floor, and coplanar seams do not snag a sliding character.
+
 Motion queries are read-only: they do not move the character or collider, apply
 forces, or wake a rigid body. Per-call body/object exclusions apply to both
 recovery and casting. `recovery_as_collision=false` suppresses recovery-only

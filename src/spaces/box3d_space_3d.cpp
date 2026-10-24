@@ -86,81 +86,45 @@ void Box3DSpace3D::unregister_area(Box3DAreaImpl3D* p_area) {
 		return;
 	}
 
-	// Queue exits to the area being detached before dropping its own overlap map. Other
-	// areas that monitored it are handled by _remove_object_from_overlaps below.
-	const HashMap<Box3DShapedObjectImpl3D*, int32_t> overlaps_copy(p_area->get_overlaps());
-	for (const KeyValue<Box3DShapedObjectImpl3D*, int32_t>& entry : overlaps_copy) {
-		_queue_area_event(p_area, entry.key, PhysicsServer3D::AREA_BODY_REMOVED);
-	}
-	p_area->clear_overlaps();
 	_remove_object_from_overlaps(p_area);
+	p_area->clear_overlaps();
 }
 
 void Box3DSpace3D::_remove_object_from_overlaps(Box3DShapedObjectImpl3D* p_object) {
-	for (Box3DAreaImpl3D* area : areas) {
-		if (area->remove_overlap_object(p_object)) {
-			_queue_area_event(area, p_object, PhysicsServer3D::AREA_BODY_REMOVED);
+	LocalVector<SensorPairKey> keys;
+	const RID object_rid = p_object->get_rid();
+	for (const KeyValue<SensorPairKey, SensorPair>& entry : sensor_pairs) {
+		if (entry.value.area == object_rid || entry.value.other == object_rid) {
+			keys.push_back(entry.key);
 		}
+	}
+	for (const SensorPairKey& key : keys) {
+		_remove_sensor_pair(key);
 	}
 }
 
+void Box3DSpace3D::_remove_sensor_pair(const SensorPairKey& p_key) {
+	const SensorPair* pair = sensor_pairs.getptr(p_key);
+	if (pair == nullptr) {
+		return;
+	}
+	Box3DAreaImpl3D* area = Box3DPhysicsServer3D::get_singleton()->get_area(pair->area);
+	if (area != nullptr && area->remove_overlap(pair->other)) {
+		_queue_area_event(*area, *pair, PhysicsServer3D::AREA_BODY_REMOVED);
+	}
+	sensor_pairs.erase(p_key);
+}
+
 void Box3DSpace3D::remove_shape_overlaps(b3ShapeId p_shape_id) {
-	if (!b3Shape_IsValid(p_shape_id)) {
-		return;
+	const uint64_t shape_id = b3StoreShapeId(p_shape_id);
+	LocalVector<SensorPairKey> keys;
+	for (const KeyValue<SensorPairKey, SensorPair>& entry : sensor_pairs) {
+		if (entry.key.sensor == shape_id || entry.key.visitor == shape_id) {
+			keys.push_back(entry.key);
+		}
 	}
-
-	if (b3Shape_IsSensor(p_shape_id)) {
-		const b3BodyId sensor_body_id = b3Shape_GetBody(p_shape_id);
-		auto* area = dynamic_cast<Box3DAreaImpl3D*>(
-				static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(sensor_body_id)));
-		if (area == nullptr) {
-			return;
-		}
-
-		const int capacity = b3Shape_GetSensorCapacity(p_shape_id);
-		if (capacity <= 0) {
-			return;
-		}
-		LocalVector<b3ShapeId> visitors;
-		visitors.resize(capacity);
-		const int count = b3Shape_GetSensorData(p_shape_id, visitors.ptr(), capacity);
-		for (int i = 0; i < count; i++) {
-			if (!b3Shape_IsValid(visitors[i])) {
-				continue;
-			}
-			const b3BodyId visitor_body_id = b3Shape_GetBody(visitors[i]);
-			auto* other = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(visitor_body_id));
-			if (other != nullptr && other != area && area->remove_overlap(other)) {
-				_queue_area_event(area, other, PhysicsServer3D::AREA_BODY_REMOVED);
-			}
-		}
-		return;
-	}
-
-	const b3BodyId visitor_body_id = b3Shape_GetBody(p_shape_id);
-	auto* visitor = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(visitor_body_id));
-	if (visitor == nullptr) {
-		return;
-	}
-	for (Box3DAreaImpl3D* area : areas) {
-		for (int32_t i = 0; i < area->get_shape_count(); i++) {
-			if (!area->has_shape_id(i)) {
-				continue;
-			}
-			const b3ShapeId sensor_shape_id = area->get_shape_id(i);
-			const int capacity = b3Shape_GetSensorCapacity(sensor_shape_id);
-			if (capacity <= 0) {
-				continue;
-			}
-			LocalVector<b3ShapeId> visitors;
-			visitors.resize(capacity);
-			const int count = b3Shape_GetSensorData(sensor_shape_id, visitors.ptr(), capacity);
-			for (int j = 0; j < count; j++) {
-				if (B3_ID_EQUALS(visitors[j], p_shape_id) && area->remove_overlap(visitor)) {
-					_queue_area_event(area, visitor, PhysicsServer3D::AREA_BODY_REMOVED);
-				}
-			}
-		}
+	for (const SensorPairKey& key : keys) {
+		_remove_sensor_pair(key);
 	}
 }
 
@@ -212,7 +176,7 @@ Box3DSpace3D::AreaOverrides Box3DSpace3D::compute_area_overrides(Box3DBodyImpl3D
 				area->get_angular_damp_mode() == PhysicsServer3D::AREA_SPACE_OVERRIDE_DISABLED) {
 			continue;
 		}
-		if (area->get_overlaps().has(p_body)) {
+		if (area->get_overlaps().has(p_body->get_rid())) {
 			overlapping.push_back(area);
 		}
 	}
@@ -378,56 +342,42 @@ void Box3DSpace3D::_pull_sensor_events() {
 			continue;
 		}
 
-		if (area->add_overlap(other)) {
-			_queue_area_event(area, other, PhysicsServer3D::AREA_BODY_ADDED);
+		SensorPair pair;
+		pair.area = area->get_rid();
+		pair.other = other->get_rid();
+		pair.other_instance_id = other->get_instance_id();
+		pair.other_is_area = dynamic_cast<Box3DAreaImpl3D*>(other) != nullptr;
+		sensor_pairs.insert({b3StoreShapeId(event.sensorShapeId), b3StoreShapeId(event.visitorShapeId)}, pair);
+
+		if (area->add_overlap(pair.other)) {
+			_queue_area_event(*area, pair, PhysicsServer3D::AREA_BODY_ADDED);
 		}
 	}
 
 	for (int i = 0; i < events.endCount; i++) {
 		const b3SensorEndTouchEvent& event = events.endEvents[i];
-		if (!b3Shape_IsValid(event.sensorShapeId)) {
-			continue;
-		}
-		const b3BodyId sensor_body_id = b3Shape_GetBody(event.sensorShapeId);
-		auto* area = static_cast<Box3DAreaImpl3D*>(b3Body_GetUserData(sensor_body_id));
-		if (area == nullptr) {
-			continue;
-		}
-
-		Box3DShapedObjectImpl3D* other = nullptr;
-		if (b3Shape_IsValid(event.visitorShapeId)) {
-			const b3BodyId visitor_body_id = b3Shape_GetBody(event.visitorShapeId);
-			other = static_cast<Box3DShapedObjectImpl3D*>(b3Body_GetUserData(visitor_body_id));
-		}
-		if (other == nullptr || other == area) {
-			continue;
-		}
-
-		if (area->remove_overlap(other)) {
-			_queue_area_event(area, other, PhysicsServer3D::AREA_BODY_REMOVED);
-		}
+		const SensorPairKey key{b3StoreShapeId(event.sensorShapeId), b3StoreShapeId(event.visitorShapeId)};
+		_remove_sensor_pair(key);
 	}
 }
 
 void Box3DSpace3D::_queue_area_event(
-		Box3DAreaImpl3D* p_area,
-		Box3DShapedObjectImpl3D* p_other,
+		const Box3DAreaImpl3D& p_area,
+		const SensorPair& p_pair,
 		PhysicsServer3D::AreaBodyStatus p_status) {
-	auto* other_body = dynamic_cast<Box3DBodyImpl3D*>(p_other);
-	auto* other_area = dynamic_cast<Box3DAreaImpl3D*>(p_other);
+	const Callable& callback =
+			p_pair.other_is_area ? p_area.get_area_monitor_callback() : p_area.get_body_monitor_callback();
+	if (!callback.is_valid()) {
+		return;
+	}
 
 	PendingAreaEvent event;
-	event.area_rid = p_area->get_rid();
+	event.area_rid = p_area.get_rid();
 	event.status = p_status;
-	event.other_rid = p_other->get_rid();
-	event.other_instance_id = p_other->get_instance_id();
-	event.other_is_area = other_area != nullptr;
-
-	if (other_body != nullptr && p_area->has_body_monitor_callback()) {
-		pending_area_events.push_back(event);
-	} else if (other_area != nullptr && p_area->has_area_monitor_callback()) {
-		pending_area_events.push_back(event);
-	}
+	event.other_rid = p_pair.other;
+	event.other_instance_id = p_pair.other_instance_id;
+	event.other_is_area = p_pair.other_is_area;
+	pending_area_events.push_back(event);
 }
 
 // Mirrors GodotBody3D::call_queries: force integration then state sync, back to back, so a

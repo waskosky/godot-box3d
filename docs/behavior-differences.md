@@ -20,6 +20,8 @@ An embedded ray endpoint still participates in overlap recovery when
 `collide_separation_ray` is false. That flag only gates the requested-motion
 cast for non-sliding rays; `slide_on_slope` rays also participate in casting.
 
+How `CharacterBody3D` recovers from overlaps is covered separately in [Character motion recovery]({{ '/character-motion/' | relative_url }}).
+
 ## `Area3D` does not detect trimesh or heightmap bodies
 
 In Box3D a concave shape (`ConcavePolygonShape3D`) or `HeightMapShape3D` can never act as a sensor *visitor*, by design, since testing an arbitrary mesh against a sensor is too expensive.

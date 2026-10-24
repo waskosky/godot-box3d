@@ -33,6 +33,12 @@ To override it, set `physics/box3d/worker_count` (visible with Advanced Settings
 Worker count changes also need a restart, and simulation results are identical at any worker count.
 The supported no-thread Web profile always uses one worker, regardless of this setting.
 
+## Length units
+
+Box3D's internal tolerances (contact slop, speculative distance, AABB margins) assume one unit is one meter.
+If your game uses another scale, set `physics/box3d/length_units_per_meter` to the number of units in a meter, for example `100` for centimeters.
+This also needs a restart.
+
 ## Platform support
 
 | Platform | Status |
