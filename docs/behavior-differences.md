@@ -4,11 +4,9 @@ title: Behavior differences
 
 # Behavior differences
 
-Places where this backend behaves differently from Godot's built-in physics.
-Some are Box3D design restrictions; others are adapter limitations or deliberate
-integration choices. Adapter limitations can be improved without changing the
-underlying engine. See [Character motion recovery](character-motion.md) for the
-current recovery policy.
+Places where the underlying engine or current adapter behaves differently from Godot's built-in physics.
+
+How `CharacterBody3D` recovers from overlaps is covered separately in [Character motion recovery]({{ '/character-motion/' | relative_url }}).
 
 ## Separation rays are query-only
 
@@ -19,8 +17,6 @@ This keeps the zero-width ray from changing body mass or generating regular coll
 An embedded ray endpoint still participates in overlap recovery when
 `collide_separation_ray` is false. That flag only gates the requested-motion
 cast for non-sliding rays; `slide_on_slope` rays also participate in casting.
-
-How `CharacterBody3D` recovers from overlaps is covered separately in [Character motion recovery]({{ '/character-motion/' | relative_url }}).
 
 ## `Area3D` does not detect trimesh or heightmap bodies
 
