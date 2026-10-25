@@ -30,9 +30,12 @@ Install Playwright and its chosen browser first, as for `run_web_smoke.py`.
 host must export the same scene with its matching embedded physics commit and
 all required host patches, without the addon side module.
 
-The report retains per-cycle frame, physics and character-query p50/p95/p99,
+The report retains per-cycle real frame-gap and character-query p50/p95/p99,
 terrain/world construction time, Godot object/resource counts, observable Wasm
 capacity and browser JS heap samples, browser/OS identity and two screenshots.
+Frame gaps use a monotonic clock rather than Godot's overload-clamped delta.
+The cached engine physics-time monitor is retained separately; it is not a
+timestamped per-step Box3D profiler.
 The runner requires stable node/resource counts after first-cycle warm-up. Inspect
 both screenshots. Keep generated reports and captures outside version control.
 

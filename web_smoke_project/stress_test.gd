@@ -21,6 +21,7 @@ var _failures: Array[String] = []
 var _label: Label
 var _records: Array[Dictionary] = []
 var _last_report := 0
+var _last_frame_usec := 0
 
 
 func _ready() -> void:
@@ -80,7 +81,9 @@ func _build_world() -> void:
             vertices.append(Vector3(x - half, height, z - half))
             if x < grid - 1 and z < grid - 1:
                 var a := z * grid + x
-                indices.append_array(PackedInt32Array([a, a + grid, a + 1, a + 1, a + grid, a + grid + 1]))
+                # Godot rendering uses clockwise front faces; the collision grid
+                # is constructed independently by HeightMapShape3D.
+                indices.append_array(PackedInt32Array([a, a + 1, a + grid, a + 1, a + grid + 1, a + grid]))
     var terrain := HeightMapShape3D.new()
     terrain.map_width = grid
     terrain.map_depth = grid
@@ -147,9 +150,12 @@ func _attach(body: CollisionObject3D, shape: Shape3D, mesh: Mesh) -> void:
     body.add_child(visual)
 
 
-func _process(delta: float) -> void:
-    if _active:
-        _frame_ms.append(delta * 1000.0)
+func _process(_delta: float) -> void:
+    var now := Time.get_ticks_usec()
+    # Engine delta is clamped during overload; retain the real frame gap.
+    if _active and _last_frame_usec > 0:
+        _frame_ms.append((now - _last_frame_usec) / 1000.0)
+    _last_frame_usec = now
 
 
 func _physics_process(_delta: float) -> void:
@@ -214,7 +220,7 @@ func _run() -> void:
         _active = true
         await get_tree().create_timer(ACTIVE_SECONDS).timeout
         _active = false
-        var record := {"cycle": cycle, "construction_ms": construction_ms, "frame_ms": _quantiles(_frame_ms), "physics_ms": _quantiles(_physics_ms), "character_queries_ms": _quantiles(_query_ms), "loaded_counts": _counts()}
+        var record := {"cycle": cycle, "construction_ms": construction_ms, "frame_ms": _quantiles(_frame_ms), "engine_physics_monitor_ms": _quantiles(_physics_ms), "character_queries_ms": _quantiles(_query_ms), "loaded_counts": _counts()}
         _characters.clear()
         _rigids.clear()
         _world.free()
