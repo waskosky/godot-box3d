@@ -48,6 +48,7 @@ def main() -> int:
     parser.add_argument("--browser-executable", default="")
     parser.add_argument("--browser", choices=("chromium", "firefox", "webkit"), default="chromium")
     parser.add_argument("--screenshot", default="")
+    parser.add_argument("--output", type=Path, help="Retain the JSON result alongside screenshots.")
     parser.add_argument("--timeout", type=float, default=45.0)
     parser.add_argument("--reloads", type=int, default=0, help="Additional page loads in the same browser context.")
     parser.add_argument("--observe-seconds", type=float, default=0.0, help="Watch for errors after the final PASS; not a performance or memory qualification.")
@@ -141,6 +142,9 @@ def main() -> int:
         "console_tail": console_lines[-20:],
     }
     print(json.dumps(result, indent=2))
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(result, indent=2) + "\n")
     return 0 if result["ok"] else 1
 
 

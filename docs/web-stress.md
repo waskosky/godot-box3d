@@ -25,6 +25,12 @@ python3 scripts/run_web_stress.py --dir build/web-smoke --headed --profile stres
   --output build/web-stress/stress.json
 ```
 
+For a cache-warm comparison, add `--warmup`. The runner first requires all ordinary smoke checks to pass in the same browser context, then opens the unchanged workload. Without that flag, each run uses a fresh browser context; this does not flush the operating system's disk cache.
+
+Export equivalent candidates with `scripts/export_web_smoke.py --profile static|extension --template /path/to/template.zip --output /new/export/directory`. Its optional `--workers N` changes only the copied project's requested Box3D worker count. The ordinary extension clamps that request to one worker. Compare static hosts with one worker first to distinguish worker-main execution from additional physics workers, then measure the intended worker setting. Export manifests retain the template/application hashes and unchanged fixture hashes.
+
+Reports include asset transfer timing, first observed active workload, host load averages, and 20 ms browser-page timer gaps during startup and active physics. Timer gaps measure page scheduling responsiveness, not input-to-display latency; asset durations do not isolate Wasm compilation time. Cold/warm labels refer to the browser context and explicit warm-up, not a freshly rebooted device. Keep these limits with comparisons.
+
 Install Playwright and its chosen browser first, as for `run_web_smoke.py`.
 `--browser firefox` and `--browser webkit` use the same workload. A custom static
 host must export the same scene with its matching embedded physics commit and

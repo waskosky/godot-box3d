@@ -8,6 +8,33 @@ This downstream profile links the existing Godot extension and godot-cpp into a 
 
 The purpose is to run the application main loop in a worker while the browser owns its page UI on the main thread. Godot 4.7 disables `proxy_to_pthread` when dynamic linking is enabled. Static embedding lets this host use `threads=yes dlink_enabled=no proxy_to_pthread=yes`. It does not imply that all multithreading requires static linking, or guarantee a startup or frame-rate improvement.
 
+## Build both templates
+
+From a clean checkout of this fork:
+
+```sh
+scripts/setup_python_build_env.sh
+scripts/bootstrap_dependencies.sh
+scripts/setup_web_toolchain.sh
+MAX_JOBS=4 scripts/build_web_static_templates.sh
+```
+
+This builds the matching Release and Debug archives and host templates, applies the included readback patch to a dedicated pinned Godot checkout, and writes `dist/web-static-templates/godot-box3d-embedded-static-web.zip` plus its checksum and `BUILD_MANIFEST.json`. The bundle includes templates, static archives, the small host module and documentation. Install a native editor addon from the same source revision separately.
+
+The build reuses engine compilation outputs on subsequent runs. `GODOT_BOX3D_STATIC_TARGET=template_release` builds only Release; `GODOT_SOURCE_DIR` selects a separate existing engine checkout. A reused checkout must contain exactly the pinned Godot revision plus the included patch; unrelated edits are preserved and cause the build to stop. The manifest records source cleanliness, dependency pins, build flags and hashes. A build receipt and a passing browser result are separate records.
+
+The manually triggered [Static Web build and physics workflow](https://github.com/waskosky/godot-box3d-embedded/actions/workflows/web-static.yml) builds both hosts, runs the same physics smoke in Chromium and Firefox, and exercises Release workload cleanup. It retains the bundle, JSON results and screenshots. It does not run on every pull request.
+
+To export the unchanged fixture with a freshly built template:
+
+```sh
+python3 scripts/export_web_smoke.py --profile static --target release \
+  --template dist/web-static-templates/templates/godot-box3d-static-web-release.zip \
+  --output build/static-web-release
+```
+
+Use `--godot /path/to/godot` if needed. The helper creates a temporary project, configures threads and addon exclusion, and writes an export manifest. It preserves existing exports by requiring an empty/new output directory. Follow the browser validation below. The lower-level commands in the next sections are useful for embedding into another host.
+
 ## Build the release archives
 
 Use a separate checkout/build directory for this profile: the pinned godot-cpp generates architecture-dependent wrappers. Requirements are Git, Python 3, a C/C++ toolchain, and enough space to compile Godot. From a clean fork checkout:

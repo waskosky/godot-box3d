@@ -5,12 +5,39 @@ from __future__ import annotations
 import argparse
 import functools
 import json
+import os
 import platform
 import threading
 import time
 from pathlib import Path
 
-from run_web_smoke import SmokeHandler
+from run_web_smoke import SmokeHandler, required_checks
+
+
+PAGE_TIMING = """() => {
+    const gaps = {startup: [], active: []};
+    let previous = performance.now();
+    setInterval(() => {
+        const now = performance.now();
+        const phase = window.__box3dWebStress?.phase;
+        const bucket = phase === 'active' ? 'active' : (!phase || phase === 'baseline' ? 'startup' : null);
+        if (bucket && gaps[bucket].length < 12000) gaps[bucket].push(now - previous);
+        previous = now;
+    }, 20);
+    const quantiles = (values) => {
+        values.sort((a, b) => a - b);
+        const at = (q) => values[Math.floor((values.length - 1) * q)] ?? null;
+        return {samples: values.length, p50: at(.5), p95: at(.95), p99: at(.99), max: at(1)};
+    };
+    window.__box3dPageTiming = () => ({
+        page_timer_gap_ms: {startup: quantiles([...gaps.startup]), active: quantiles([...gaps.active])},
+        resources: performance.getEntriesByType('resource')
+            .filter(r => /\\.(wasm|pck)$/.test(new URL(r.name).pathname))
+            .map(r => ({name: new URL(r.name).pathname.split('/').pop(),
+                start_ms: r.startTime, duration_ms: r.duration, transfer_bytes: r.transferSize,
+                encoded_bytes: r.encodedBodySize}))
+    });
+} """
 
 
 def main() -> int:
@@ -22,6 +49,7 @@ def main() -> int:
     parser.add_argument("--browser-executable", default="")
     parser.add_argument("--browser-arg", action="append", default=[], help="Explicit Chromium launch flag; retained in the report.")
     parser.add_argument("--headed", action="store_true")
+    parser.add_argument("--warmup", action="store_true", help="First pass the ordinary smoke in the same browser context to warm caches.")
     parser.add_argument("--timeout", type=float, default=180)
     args = parser.parse_args()
     from http.server import ThreadingHTTPServer
@@ -34,7 +62,12 @@ def main() -> int:
     samples: list[dict] = []
     lines: list[str] = []
     result: dict = {}
-    report: dict = {"browser": args.browser, "headed": args.headed, "host": platform.platform(), "profile": args.profile, "browser_args": args.browser_arg}
+    report: dict = {"browser": args.browser, "headed": args.headed, "host": platform.platform(), "profile": args.profile, "browser_args": args.browser_arg,
+                    "cache_state": "warm-after-smoke" if args.warmup else "fresh-browser-context",
+                    "host_cpu_count": os.cpu_count(), "host_load_average_start": os.getloadavg() if hasattr(os, "getloadavg") else None}
+    manifest = args.dir / "EXPORT_MANIFEST.json"
+    if manifest.is_file():
+        report["export"] = json.loads(manifest.read_text())
     try:
         with sync_playwright() as playwright:
             options: dict = {"headless": not args.headed, "timeout": 30000}
@@ -45,6 +78,7 @@ def main() -> int:
             browser = getattr(playwright, args.browser).launch(**options)
             report["browser_version"] = browser.version
             page = browser.new_page(viewport={"width": 1280, "height": 720})
+            page.add_init_script(f"({PAGE_TIMING})()")
             page.on("pageerror", lambda error: errors.append(str(error)))
 
             def console(message: object) -> None:
@@ -57,6 +91,15 @@ def main() -> int:
                     lines.append(line)
 
             page.on("console", console)
+            if args.warmup:
+                warmup_started = time.monotonic()
+                page.goto(f"http://127.0.0.1:{server.server_port}/index.html", wait_until="domcontentloaded", timeout=int(args.timeout * 1000))
+                while "RESULT: PASS" not in lines and not errors and time.monotonic() - warmup_started < args.timeout:
+                    page.wait_for_timeout(100)
+                if not all(required_checks(lines).values()) or errors:
+                    raise RuntimeError("Cache warm-up did not pass the unchanged physics smoke")
+                report["warmup_seconds_to_physics_pass"] = round(time.monotonic() - warmup_started, 3)
+                lines.clear()
             started = time.monotonic()
             response = page.goto(f"http://127.0.0.1:{server.server_port}/index.html?box3d_stress={args.profile}", wait_until="domcontentloaded", timeout=int(args.timeout * 1000))
             first_active = None
@@ -85,6 +128,7 @@ def main() -> int:
                 return {renderer: debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
                         vendor: debug ? gl.getParameter(debug.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR)};
             }""")
+            report.update(page.evaluate("() => window.__box3dPageTiming()"))
             renderer = str(report["graphics"].get("renderer", "")).lower()
             report["hardware_timing_eligible"] = bool(args.headed and renderer and not any(x in renderer for x in ("swiftshader", "llvmpipe", "software", "lavapipe")))
             page.screenshot(path=str(args.output.with_suffix(".final.png")))
@@ -99,6 +143,7 @@ def main() -> int:
     # Ignore first-cycle resource warm-up; subsequent cleanups must release the same objects.
     stable = len(cleanup) == 6 and all(all(row[key] == cleanup[1][key] for key in ("nodes", "resources")) for row in cleanup[2:])
     report.update({"physics": result, "cleanup_nodes_resources_stable": stable, "samples": samples, "errors": errors, "console": lines})
+    report["host_load_average_end"] = os.getloadavg() if hasattr(os, "getloadavg") else None
     report["ok"] = bool(report.get("http_ok") and result.get("ok") and stable and not errors)
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({key: value for key, value in report.items() if key not in ("samples", "console", "physics")}, indent=2))
