@@ -35,6 +35,9 @@ var _result_lines: Array[String] = []
 
 
 func _ready() -> void:
+    if OS.has_feature("web") and JavaScriptBridge.eval("new URLSearchParams(location.search).has('box3d_stress')"):
+        get_tree().change_scene_to_file.call_deferred("res://stress_test.tscn")
+        return
     _create_status_ui()
     _append_status("Godot Box3D Web smoke test")
     _append_status("Platform: %s" % OS.get_name())

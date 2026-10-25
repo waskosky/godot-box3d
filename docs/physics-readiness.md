@@ -38,6 +38,9 @@ rigid settling, areas, hinges and separation rays. Run the same release export
 in Chromium, Firefox and WebKit. Its small character-query timing is diagnostic:
 it is not a device-performance or memory-growth qualification.
 
+The opt-in [desktop Web workload](web-stress.md) adds repeated terrain/body
+construction, sustained movement and cleanup measurements to that same export.
+
 ## Remaining acceptance gates
 
 1. Test physical Android and iPhone/Safari devices, including repeated scene
