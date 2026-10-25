@@ -5,6 +5,8 @@ Downstream `main` records the reviewed baseline and its stated qualification;
 `integration/next` combines independent candidates for downstream testing;
 upstream pull requests remain based directly on upstream `main`.
 
+The [Web preview qualification](web-preview.md) records the current static Debug/Release CI results and the separate local browser workload comparison, including its failed Firefox deadlines and unqualified hardware/device budgets.
+
 ## Behavioral coverage
 
 The native suite exercises actual Godot bodies and queries, including:

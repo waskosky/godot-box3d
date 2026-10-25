@@ -8,6 +8,14 @@ We maintain static embedding into custom Godot Web templates, application execut
 
 **Status: experimental.** Passing regressions establish a development baseline. Device support, startup latency, sustained frame pacing, and memory budgets require qualification for the application using the backend. See [physics readiness](docs/physics-readiness.md) and [release qualification](docs/release-qualification.md).
 
+## Try the prebuilt Web preview
+
+Use **Godot 4.7** with [Web preview 1](https://github.com/waskosky/godot-box3d-embedded/releases/tag/v0.2.7-embedded.1). Install its [native editor addon](https://github.com/waskosky/godot-box3d-embedded/releases/download/v0.2.7-embedded.1/godot-box3d-embedded-native-editor.zip) by copying `addons/godot-box3d/` into your project, then select **Box3D Physics** and the Compatibility renderer.
+
+For worker-main execution, download the [static Web bundle](https://github.com/waskosky/godot-box3d-embedded/releases/download/v0.2.7-embedded.1/godot-box3d-embedded-static-web.zip) and follow [static embedding](docs/static-embedding.md#use-the-prebuilt-preview) to select its Debug/Release templates. For an ordinary extension export, use the [ordinary Web bundle](https://github.com/waskosky/godot-box3d-embedded/releases/download/v0.2.7-embedded.1/godot-box3d-web-release.zip) and [Web quick start](WEB_QUICKSTART.md). Keep the files from the same release together and verify the accompanying checksums.
+
+The release includes [qualification evidence](docs/web-preview.md): bounded physics and cleanup pass in Chromium and Firefox on Linux software GL. Local Firefox timeouts, software-rendered text artifacts, hardware performance, WebKit and physical mobile acceptance remain explicit limits.
+
 ## Choose a Web build
 
 | Profile | How Box3D is loaded | When to use it |

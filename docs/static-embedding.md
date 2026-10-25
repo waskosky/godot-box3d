@@ -8,6 +8,16 @@ This downstream profile links the existing Godot extension and godot-cpp into a 
 
 The purpose is to run the application main loop in a worker while the browser owns its page UI on the main thread. Godot 4.7 disables `proxy_to_pthread` when dynamic linking is enabled. Static embedding lets this host use `threads=yes dlink_enabled=no proxy_to_pthread=yes`. It does not imply that all multithreading requires static linking, or guarantee a startup or frame-rate improvement.
 
+## Use the prebuilt preview
+
+[Web preview 1](https://github.com/waskosky/godot-box3d-embedded/releases/tag/v0.2.7-embedded.1) contains matching artifacts for Godot 4.7:
+
+1. Install `godot-box3d-embedded-native-editor.zip` by copying its `addons/godot-box3d/` into your project. Select **Box3D Physics** and the Compatibility renderer.
+2. Extract `godot-box3d-embedded-static-web.zip`. Set the Web preset's custom Debug and Release template paths to the ZIPs in its `templates/` directory.
+3. Enable **Thread Support**, disable **Extensions Support**, and exclude `addons/godot-box3d/*` from the Web export. Follow the hosting requirements below, including COOP/COEP headers.
+
+Verify the accompanying `.sha256` files and keep native and Web artifacts from the same release. The static bundle also contains archives and the host module for custom builds; point `box3d_archive_dir` at its `archives/` directory when using those inputs. The [qualification record](web-preview.md) states the supported test scope and remaining device, performance and visual gates.
+
 ## Build both templates
 
 From a clean checkout of this fork:
@@ -128,6 +138,8 @@ Retain the source commit, dependency pins, compiler version, host build flags, p
 The [release qualification guide](release-qualification.md) covers startup, sustained frame pacing, memory, physical devices, and host acceptance beyond this focused smoke test. The [worker readback record](web-worker-readback.md) distinguishes earlier host-specific evidence from the current candidate.
 
 ## Recorded validation (2026-10-25)
+
+The [automated preview qualification](web-preview.md#automated-static-results) covers a newer source revision and both Debug and Release. The record below preserves the earlier standalone example and its exact hashes.
 
 The standalone example was built from [source commit `83b5d55`](https://github.com/waskosky/godot-box3d-embedded/commit/83b5d55ce50b91dd43119f573b45228c843d49fe), using [that commit's dependency pins](https://github.com/waskosky/godot-box3d-embedded/blob/83b5d55ce50b91dd43119f573b45228c843d49fe/dependencies.lock). The physics adapter source is unchanged from the previously validated integration baseline `e7f81af`; this candidate adds the generic host module and downstream documentation/build support.
 

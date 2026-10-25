@@ -33,6 +33,8 @@ nav:
     url: /building/
   - title: Static Web embedding
     url: /static-embedding/
+  - title: Web preview qualification
+    url: /web-preview/
 
 exclude:
   - Gemfile
