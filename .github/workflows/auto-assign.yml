@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   assign:
+    if: github.repository == 'bearlikelion/godot-box3d'
     runs-on: ubuntu-latest
     steps:
       - name: Assign bearlikelion

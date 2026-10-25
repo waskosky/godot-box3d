@@ -5,6 +5,8 @@ permalink: /
 
 # godot-box3d
 
+This is [waskosky's downstream fork](https://github.com/waskosky/godot-box3d) of [bearlikelion/godot-box3d](https://github.com/bearlikelion/godot-box3d). It maintains static Web embedding and worker-main host support alongside general physics improvements. Read the [fork README](https://github.com/waskosky/godot-box3d#readme) for the branch policy and rationale, or the [static embedding guide]({{ '/static-embedding/' | relative_url }}) for the reusable host module and build recipe.
+
 A [GDExtension](https://docs.godotengine.org/en/stable/tutorials/scripting/gdextension/what_is_gdextension.html) that integrates [Box3D](https://github.com/erincatto/box3d), Erin Catto's 3D physics engine, into Godot 4 as a drop-in replacement for the built-in `PhysicsServer3D`.
 
 Stock Godot physics nodes keep working. You change a project setting, not your scenes.
@@ -20,7 +22,7 @@ Stock Godot physics nodes keep working. You change a project setting, not your s
 
 ## Why this exists
 
-I'm building [SurfsUp](https://store.steampowered.com/app/3454830/SurfsUp/), a recreation of Source-engine "SkillSurf" in Godot. Surf maps are hard on a physics engine: long ramps built from concave trimesh, corners taken at speed, and head surf along the underside of geometry. Godot's built-in physics and godot-jolt both have trouble with parts of that.
+The upstream author developed this adapter while building [SurfsUp](https://store.steampowered.com/app/3454830/SurfsUp/), a recreation of Source-engine "SkillSurf" in Godot. Surf maps involve long concave ramps, corners taken at speed, and contact along the underside of geometry. This fork's additional motivation is a custom Web host with the application main loop running in a worker.
 
 Box3D is worth trying because of where it came from. [Erin Catto](https://x.com/erin_catto) started it from Valve's Rubikon-lite, the physics engine of Source 2 ([Announcing Box3D](https://box2d.org/posts/2026/06/announcing-box3d/#valve-to-the-rescue)), so a Rubikon-lineage solver seemed like a reasonable bet.
 

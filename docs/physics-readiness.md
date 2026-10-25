@@ -1,6 +1,7 @@
 # Physics readiness
 
 This is a validated development milestone, not production certification.
+Downstream `main` records the reviewed baseline and its stated qualification;
 `integration/next` combines independent candidates for downstream testing;
 upstream pull requests remain based directly on upstream `main`.
 

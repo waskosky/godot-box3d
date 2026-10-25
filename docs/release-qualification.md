@@ -1,6 +1,7 @@
 # Release qualification
 
-Freeze one `integration/next` commit for a release candidate. Keep that commit,
+Freeze a downstream `main` commit for a release candidate, or qualify a named
+`integration/next` candidate before promotion. Keep that commit,
 Godot/godot-cpp/Box3D pins, compiler, host patch hashes and artifact SHA-256 values
 together. Experiments may follow the branch; deployed artifacts use immutable
 pins and retain the previous qualified version for rollback.

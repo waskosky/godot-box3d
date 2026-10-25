@@ -1,86 +1,44 @@
-# godot-box3d
+# godot-box3d — downstream Web builds
 
-A [GDExtension](https://docs.godotengine.org/en/stable/tutorials/scripting/gdextension/what_is_gdextension.html) that integrates [Box3D](https://github.com/erincatto/box3d), Erin Catto's 3D physics engine, into Godot 4 as a drop-in replacement for the built-in `PhysicsServer3D`.
+This is [waskosky's downstream fork](https://github.com/waskosky/godot-box3d) of [bearlikelion/godot-box3d](https://github.com/bearlikelion/godot-box3d). It integrates [Erin Catto's Box3D](https://github.com/erincatto/box3d) with Godot's `PhysicsServer3D`, keeping ordinary Godot physics nodes and scenes usable.
 
-Stock Godot physics nodes keep working.
-You change a project setting, not your scenes.
+We maintain static embedding into custom Godot Web templates, application execution in a Web Worker, and the build tools and host patches needed for that configuration. General physics improvements continue to be offered upstream as focused pull requests. The upstream project's original motivation and development history belong to its author; see its [README](https://github.com/bearlikelion/godot-box3d#readme).
 
-> **Status: early and experimental.** Box3D itself is a young engine, and this extension is a work in progress. Expect missing features and rough edges.
+**Status: experimental.** Passing regressions establish a development baseline. Device support, startup latency, sustained frame pacing, and memory budgets require qualification for the application using the backend. See [physics readiness](docs/physics-readiness.md) and [release qualification](docs/release-qualification.md).
 
-**Documentation:** https://bearlikelion.github.io/godot-box3d/
+## Choose a Web build
 
-## Why
+| Profile | How Box3D is loaded | When to use it |
+|---|---|---|
+| Ordinary Web extension | A Wasm side module, using official Godot 4.7 dynamic-link templates | Start here for a normal addon export; follow the [Web quick start](WEB_QUICKSTART.md). |
+| Static worker-main host | Box3D and godot-cpp archives linked into a custom Godot template | Use when the application's main loop must run in a worker; follow [static embedding](docs/static-embedding.md). |
 
-I'm building [SurfsUp](https://store.steampowered.com/app/3454830/SurfsUp/), a recreation of Source-engine "SkillSurf" in Godot.
-Surf maps are hard on a physics engine: long ramps built from concave trimesh, corners taken at speed, and head surf along the underside of geometry.
-Godot's built-in physics and godot-jolt both have trouble with parts of that.
+For the ordinary Web profile, enable **Extensions Support**, disable **Thread Support**, select **Box3D Physics**, and use the Compatibility renderer. Fork builds and snapshots are listed in [this repository's Actions](https://github.com/waskosky/godot-box3d/actions) and [Releases](https://github.com/waskosky/godot-box3d/releases); check that the chosen artifact contains the required native editor and Web libraries. Upstream release addons remain available from [upstream Releases](https://github.com/bearlikelion/godot-box3d/releases), with their own feature set and dependency versions.
 
-Box3D is worth trying here because of where it came from.
-[Erin Catto](https://x.com/erin_catto) started it from Valve's Rubikon-lite, the physics engine of Source 2 ([Announcing Box3D](https://box2d.org/posts/2026/06/announcing-box3d/#valve-to-the-rescue)), so a Rubikon-lineage solver seemed like a reasonable bet.
+## Why maintain static embedding downstream?
 
-New tech is cool and Godot is great.
-That's most of it.
-This is my first time doing physics programming, and I am building the bridge between Godot's [PhysicsServer3D](https://docs.godotengine.org/en/stable/classes/class_physicsserver3d.html) and Box3D based on the architecture of [godot-jolt](https://github.com/godot-jolt/godot-jolt).
+Our goal is to keep the surrounding browser page responsive while the application loads and runs. The browser owns the DOM and page UI on its main thread. With `proxy_to_pthread=yes`, Godot's application main loop runs in a Web Worker. Physics worker threads are a separate setting; enabling them alone does not move the application's main loop.
 
-## Quick start
+At the [pinned Godot 4.7 revision](https://github.com/godotengine/godot/blob/5b4e0cb0fd279832bbdd69fed5354d4e5ad26f88/platform/web/detect.py#L294-L297), `dlink_enabled=yes` disables `proxy_to_pthread`. We therefore link the existing Box3D extension and its matching godot-cpp archive into a host template with dynamic linking disabled, then register it through Godot's function-based GDExtension loader. The [small host module](examples/godot_static/box3d_static) shows that registration without rewriting the physics adapter as an engine module.
 
-1. Download the addon zip from [Releases](https://github.com/bearlikelion/godot-box3d/releases) and copy `addons/godot-box3d/` into your project.
-2. Set **Project Settings → Physics → 3D → Physics Engine** to `Box3D Physics`.
-3. Restart Godot.
+This choice couples the backend to a custom template, exact dependency versions, thread deployment requirements, and host rendering behavior. Builds take longer and the host owns its release and rollback artifacts. Moving the main loop does not guarantee faster downloads, shorter startup, or responsive in-game menus during a blocking operation. Those benefits and costs must be measured in the actual application.
 
-Requires Godot 4.3 or newer.
-Linux and Windows are tested; macOS universal builds are experimental.
-For browser exports, follow the [Web quick start](WEB_QUICKSTART.md) with official Godot 4.7 templates or the matching source-built alternatives.
-The [physics readiness guide](docs/physics-readiness.md) records the integration candidate's coverage and remaining acceptance gates.
-Worker threads, length units, and checking that the backend loaded are covered in [Installation](https://bearlikelion.github.io/godot-box3d/installation/).
+The upstream maintainer prefers a small Web build using the existing CMake project and official templates. That is a useful general-purpose support model. This fork carries the additional host configuration and its maintenance burden. The optional [WebGL readback patch](docs/web-worker-readback.md) applies to the documented proxied-context arrangement; it is not a change to Box3D's physics behavior.
 
-## What works
+## Branches and contributions
 
-- Rigid, static, and kinematic bodies
-- Box, sphere, capsule, cylinder, convex, trimesh, heightmap, world boundary, and query-only separation ray shapes, with live updates of shared resources
-- Areas with overlap events, gravity and damping overrides, and point gravity
-- Ray casts, shape casts, and the other direct space state queries
-- `CharacterBody3D` and `move_and_slide()`
-- Contact monitoring with real contact points, normals, and impulses
-- Pin, hinge, and slider joints
-- A multithreaded solver with identical results at any worker count
+- `main` is the reviewed downstream baseline and the default starting point for this fork. Static-host qualification is recorded separately from ordinary extension CI.
+- `integration/next` is the advancing feed for features and experiments. Development consumers can follow it; deployments should retain an immutable, qualified commit and its artifacts.
+- `upstream/main` is the Git remote-tracking reference for bearlikelion's project. Upstream pull requests start from that reference and contain only their focused change.
 
-Not done yet: ConeTwist and `Generic6DOFJoint3D`, `SoftBody3D`, solver profiling, and more platforms.
-A few things also behave differently from Godot's built-in physics, listed in [Behavior differences](https://bearlikelion.github.io/godot-box3d/behavior-differences/).
+Downstream `main` periodically promotes a tested integration snapshot. Keep baseline fixes and documentation in `integration/next` too. We track Godot, godot-cpp, Emscripten, and the original `erincatto/box3d` repository in [dependencies.lock](dependencies.lock). Consumer-specific application code and deployment configuration are maintained by their hosts.
 
-## Benchmark
+## Physics support
 
-A 4096-box drop test, same scene and seed on every backend.
-Box3D held the 60 FPS budget longest and had the tightest tail.
+The fork covers rigid/static/kinematic bodies, areas, direct queries, character motion, pin/hinge/slider joints, and primitive, convex, trimesh, heightmap, world-boundary, and query-only separation-ray shapes. Focused regressions cover shared resources, terrain and contact geometry, animated platforms, and rigid-body behavior.
 
-| Backend | Bodies at 16.66 ms | Median step | p95 step | Peak step | Memory |
-|---|---|---|---|---|---|
-| **Box3D Physics** | **1404** | **27.3 ms** | **63.1 ms** | **66.8 ms** | **117 MB** |
-| Jolt Physics | 1080 | 56.9 ms | 99.9 ms | 139.9 ms | 150 MB |
-| Godot Physics | 1044 | 54.6 ms | 235.5 ms | 306.0 ms | 177 MB |
-| Rapier3D | 684 | 79.2 ms | 249.3 ms | 303.2 ms | 177 MB |
+Read [behavior differences](docs/behavior-differences.md) before adopting it. Unsupported joints, soft bodies, concave sensor visitors, scaling restrictions, and remaining qualification gates are explicit in the [readiness guide](docs/physics-readiness.md). General installation and native build instructions are in [installation](docs/installation.md) and [building](docs/building.md).
 
-Methodology, caveats, and graphs are on the [Benchmarks](https://bearlikelion.github.io/godot-box3d/benchmarks/) page.
+## License and credit
 
-## Compared to box3d-godot
-
-[box3d-godot](https://github.com/Stink-O/box3d-godot) exposes Box3D as its own set of nodes instead of replacing Godot's physics.
-It reaches more of Box3D; this project keeps stock nodes and addons working.
-The [comparison](https://bearlikelion.github.io/godot-box3d/comparison/) covers which fits your project.
-
-## Building
-
-See [Building from source](https://bearlikelion.github.io/godot-box3d/building/) for build, cross-compile, and test instructions.
-
-## Contributing
-
-Help wanted!
-This is a big project for one person, and contributions of any size are welcome: missing features from the list above, bug reports with reproduction scenes, benchmarks, documentation, or just trying it in your project and reporting what breaks.
-Open an issue or a pull request.
-
-## License
-
-MIT. See [LICENSE](LICENSE) for details.
-
-Box3D is licensed under the [MIT license](https://github.com/erincatto/box3d/blob/main/LICENSE).
-This project takes structural inspiration from [godot-jolt](https://github.com/godot-jolt/godot-jolt), also MIT licensed.
+MIT; see [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The upstream Godot adapter is maintained by [bearlikelion](https://github.com/bearlikelion/godot-box3d), Box3D by [Erin Catto and contributors](https://github.com/erincatto/box3d), and Godot/godot-cpp by their respective contributors. The adapter takes structural inspiration from [godot-jolt](https://github.com/godot-jolt/godot-jolt).

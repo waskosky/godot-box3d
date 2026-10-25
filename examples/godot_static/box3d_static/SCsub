@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+from pathlib import Path
+
+Import("env")
+Import("env_modules")
+
+if env["arch"] != "wasm32" or env["precision"] != "single" or not env["threads"] or env["dlink_enabled"]:
+	raise ValueError("box3d_static requires wasm32, precision=single, threads=yes, and dlink_enabled=no")
+
+archive_dir = Path(env["box3d_archive_dir"]).resolve()
+suffix = ".web.{}.wasm32.a".format(env["target"])
+archives = [archive_dir / (name + suffix) for name in ("libgodot-box3d-static", "libgodot-cpp")]
+for archive in archives:
+	if not archive.is_file():
+		raise ValueError("Missing static archive: {}. Build the matching target with scripts/build_web_static.sh.".format(archive))
+
+env_modules.add_source_files(env.modules_sources, "register_types.cpp")
+env.Append(LIBS=[env.File(str(archive)) for archive in archives])

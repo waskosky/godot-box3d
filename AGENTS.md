@@ -1,5 +1,12 @@
 # Contributor and Agent Guidance
 
+## Downstream baseline
+
+- `main` is this fork's reviewed downstream baseline; `integration/next` carries advancing experiments. Promote validated snapshots without rewriting shared history and carry baseline fixes/documentation into the integration feed.
+- Keep the fork README explicit about upstream attribution, static embedding, worker-main motivation, host responsibilities, and the limits of the recorded validation.
+- Validate a new static host module/template with the existing browser physics smoke scene. Archive-only checks and ordinary dynamic-extension CI do not qualify the static profile.
+- Keep the example host module generic. Private consumer code, identifiers, and deployment configuration do not belong in public changes.
+
 ## Upstream pull requests
 
 - Base every upstream pull request directly on the current `bearlikelion/godot-box3d` `main` branch. Do not use `integration/next` as an upstream pull request base.

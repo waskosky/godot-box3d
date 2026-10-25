@@ -180,6 +180,14 @@ def main() -> int:
             allow_missing=False, missing=missing,
         )
 
+        for example_root in ((addon, staging) if args.mode == "bundle" else (addon,)):
+            for filename in ("config.py", "SCsub", "register_types.h", "register_types.cpp"):
+                example_path = Path("examples/godot_static/box3d_static") / filename
+                copy_required(
+                    REPO_ROOT / example_path, example_root / example_path,
+                    allow_missing=False, missing=missing,
+                )
+
         included_binaries: list[dict[str, str | int]] = []
         for platform in selected:
             for relative_text in PLATFORM_BINARIES[platform]:

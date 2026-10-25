@@ -4,7 +4,7 @@ Godot Web exports can load `godot-box3d` when the extension side module and the 
 
 ## Fastest route: use a prebuilt Web bundle
 
-Install the normal desktop addon from the latest release first. For a tagged version, download its versioned Web ZIP and `.sha256` checksum from [Releases](https://github.com/bearlikelion/godot-box3d/releases). For development snapshots, download the `godot-box3d-web-release` artifact from a successful **Web build and smoke** workflow run.
+Install the normal desktop addon first. For a tagged fork version, download its versioned Web ZIP and `.sha256` checksum from [fork Releases](https://github.com/waskosky/godot-box3d/releases) when available. For development snapshots, download the `godot-box3d-web-release` artifact from a successful [Web build and smoke run](https://github.com/waskosky/godot-box3d/actions/workflows/web.yml). Match the addon and Web files to the same qualified source revision.
 
 The archive contains:
 
@@ -164,6 +164,8 @@ for those separate gates.
 The dependency versions used for the extension and matching templates are recorded in [`dependencies.lock`](dependencies.lock).
 
 ## Embedded Web archive for worker-main hosts
+
+For the complete build/export recipe and the generic registration module, follow [static embedding](docs/static-embedding.md). The fork's [README](README.md#why-maintain-static-embedding-downstream) explains why this profile is maintained downstream.
 
 The normal supported package above remains the dynamic, single-threaded route.
 An embedding host that builds its own Godot Web template can instead produce

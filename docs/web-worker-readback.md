@@ -48,7 +48,8 @@ for index in arrays[Mesh.ARRAY_INDEX]:
 assert(mesh.create_trimesh_shape() != null)
 ```
 
-Then export the unmodified `web_smoke_project` from `integration/next` with the
+Follow [static embedding](static-embedding.md) for the reusable host module and build recipe.
+Then export the unmodified `web_smoke_project` from the candidate commit with the
 patched worker-main/static template and no addon side module. Require backend/class registration, terrain
 grounding, rigid-load support, animated platform carry, separation rays, areas
 and hinge movement in Chromium, Firefox and desktop WebKit. Keep physical-device,

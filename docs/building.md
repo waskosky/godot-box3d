@@ -4,6 +4,8 @@ title: Building from source
 
 # Building from source
 
+These instructions build the downstream fork. The [static Web embedding guide](static-embedding.md) covers the custom worker-main host; the [Web quick start](../WEB_QUICKSTART.md) covers ordinary extension exports.
+
 ## Requirements
 
 - CMake 3.22 or newer
@@ -15,7 +17,7 @@ title: Building from source
 ## Clone and build
 
 ```sh
-git clone --recurse-submodules https://github.com/bearlikelion/godot-box3d.git
+git clone --recurse-submodules https://github.com/waskosky/godot-box3d.git
 cd godot-box3d
 cmake -B build
 cmake --build build --parallel
