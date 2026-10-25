@@ -198,7 +198,10 @@ func _counts() -> Dictionary:
 func _publish(value: Dictionary) -> void:
     value["profile"] = _profile
     value["failures"] = _failures.duplicate()
-    _label.text = "Box3D Web workload: %s\n%s\n%s" % [_profile, JSON.stringify(value), "PASS so far" if _failures.is_empty() else "FAIL"]
+    var detail := "characters=%d  rigid bodies=%d  ticks=%d" % [_characters.size(), _rigids.size(), _ticks]
+    if value.get("phase") == "complete":
+        detail = "%d construction / movement / cleanup cycles completed" % _records.size()
+    _label.text = "Box3D Web workload: %s / %s\n%s\n%s" % [_profile, value.get("phase", ""), detail, "PASS so far" if _failures.is_empty() else "FAIL: " + str(_failures)]
     if OS.has_feature("web"):
         JavaScriptBridge.eval("window.__box3dWebStress = " + JSON.stringify(value))
 
@@ -218,7 +221,11 @@ func _run() -> void:
         _physics_ms.clear()
         _query_ms.clear()
         _active = true
-        await get_tree().create_timer(ACTIVE_SECONDS).timeout
+        # Scene timers use clamped simulation delta under severe overload.
+        # Keep each workload interval bounded by elapsed wall time instead.
+        var deadline := Time.get_ticks_msec() + int(ACTIVE_SECONDS * 1000.0)
+        while Time.get_ticks_msec() < deadline:
+            await get_tree().process_frame
         _active = false
         var record := {"cycle": cycle, "construction_ms": construction_ms, "frame_ms": _quantiles(_frame_ms), "engine_physics_monitor_ms": _quantiles(_physics_ms), "character_queries_ms": _quantiles(_query_ms), "loaded_counts": _counts()}
         _characters.clear()

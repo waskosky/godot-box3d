@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--profile", choices=("representative", "stress"), default="representative")
     parser.add_argument("--browser", choices=("chromium", "firefox", "webkit"), default="chromium")
     parser.add_argument("--browser-executable", default="")
+    parser.add_argument("--browser-arg", action="append", default=[], help="Explicit Chromium launch flag; retained in the report.")
     parser.add_argument("--headed", action="store_true")
     parser.add_argument("--timeout", type=float, default=180)
     args = parser.parse_args()
@@ -33,14 +34,14 @@ def main() -> int:
     samples: list[dict] = []
     lines: list[str] = []
     result: dict = {}
-    report: dict = {"browser": args.browser, "headed": args.headed, "host": platform.platform(), "profile": args.profile}
+    report: dict = {"browser": args.browser, "headed": args.headed, "host": platform.platform(), "profile": args.profile, "browser_args": args.browser_arg}
     try:
         with sync_playwright() as playwright:
             options: dict = {"headless": not args.headed, "timeout": 30000}
             if args.browser_executable:
                 options["executable_path"] = args.browser_executable
             if args.browser == "chromium":
-                options["args"] = ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows"]
+                options["args"] = ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", *args.browser_arg]
             browser = getattr(playwright, args.browser).launch(**options)
             report["browser_version"] = browser.version
             page = browser.new_page(viewport={"width": 1280, "height": 720})
@@ -74,6 +75,8 @@ def main() -> int:
                 page.wait_for_timeout(500)
             report["seconds_to_first_active_observation"] = first_active
             report["elapsed_seconds"] = round(time.monotonic() - started, 3)
+            if not result and not errors:
+                errors.append(f"workload did not complete within {args.timeout:g} seconds")
             report["graphics"] = page.evaluate("""() => {
                 const canvas = document.querySelector('canvas');
                 const gl = canvas && canvas.getContext('webgl2');
