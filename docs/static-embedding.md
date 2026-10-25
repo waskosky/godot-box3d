@@ -72,7 +72,7 @@ python3 scripts/serve_web_export.py /path/to/export --port 8060
 
 ## Validate the exact candidate
 
-Copy `web_smoke_project` into an ignored build directory, change that copy's Web preset to the settings above, exclude its addon, and export with the freshly built custom ZIP. Keep the scene and physics assertions unchanged. Then run:
+Copy `web_smoke_project` into an ignored build directory, change that copy's Web preset to the settings above, exclude its addon, and export with the freshly built custom ZIP. Keep the scene and physics assertions unchanged. The fixture's bundled descriptor is Web-only: use `--recovery-mode` for a headless export, or install your matching native addon before importing it in the editor. Then run:
 
 ```sh
 .venv/bin/python -m pip install playwright==1.61.0
@@ -86,3 +86,31 @@ Require active `Box3DPhysicsServer3D`, extension registration, rigid settling, a
 Retain the source commit, dependency pins, compiler version, host build flags, patch and archive hashes, template hash, and browser results together. A successful archive build alone does not qualify the host. Keep the previous template until the new candidate passes the host's acceptance checks. Applications with a native authority must coordinate the matching physics revision separately.
 
 The [release qualification guide](release-qualification.md) covers startup, sustained frame pacing, memory, physical devices, and host acceptance beyond this focused smoke test. The [worker readback record](web-worker-readback.md) distinguishes earlier host-specific evidence from the current candidate.
+
+## Recorded validation (2026-10-25)
+
+The standalone example was built from [source commit `83b5d55`](https://github.com/waskosky/godot-box3d/commit/83b5d55ce50b91dd43119f573b45228c843d49fe), using [that commit's dependency pins](https://github.com/waskosky/godot-box3d/blob/83b5d55ce50b91dd43119f573b45228c843d49fe/dependencies.lock). The physics adapter source is unchanged from the previously validated integration baseline `e7f81af`; this candidate adds the generic host module and downstream documentation/build support.
+
+Fresh archives and a fresh Godot source build used Emscripten 4.0.20, SCons 4.8.1, all default engine modules, `target=template_release arch=wasm32 precision=single threads=yes dlink_enabled=no proxy_to_pthread=yes`, and the included readback patch. The host was macOS 15.7.1, x86_64, with Playwright 1.61.0.
+
+| Build artifact | SHA-256 |
+|---|---|
+| Box3D binding archive | `8f75344bf78edb78440880b62b2a173e8dfd7d2bb2a114145f4f09255edf51ff` |
+| godot-cpp archive | `44543aeaf9f5f3f69a6002803ad475601f25702e89848af2e59303f140c7f09d` |
+| Readback patch | `3e2efb2e07db23cd5f429dec3b68b7e8a53659cf10f1ca523bd148a1de342eae` |
+| Release template ZIP | `c19dfcbceb3fdc2bf7bd7055b56a64abde4196bf87d9373c58f60ee49ca9bf34` |
+| Exported application Wasm | `1a35c51e104b2f6501f4026808325018169610e175aa829ed3af8fbd422b4b17` |
+
+The smoke project had a matching native addon installed for a normal editor import. The static Web preset excluded that addon and disabled extension support. Import and export completed without reported errors; the export contains one application Wasm and no Box3D side module. The generated JavaScript includes the worker-main entry path. The scene and its assertions were unchanged (`smoke_test.gd` SHA-256 `9cc45b49d4efff149425a3575ea4450fd14883221084f4ab7c41e479129fdf8f`).
+
+| Browser | Physics result | Seconds to physics PASS |
+|---|---|---|
+| Chromium | All 10 required checks pass; final frame inspected | 7.090 |
+| Firefox | All 10 required checks pass; final frame inspected | 33.694 |
+| Desktop WebKit | Unqualified: browser launch timed out before project navigation | — |
+
+The two passing runs captured no engine/browser errors during the smoke and a two-second post-PASS observation. Existing warnings about ignored hinge parameters and browser graphics/Wasm behavior remain. The times include the scene's simulation and are not first-frame startup or sustained performance measurements. Firefox used an explicitly recorded 180-second diagnostic timeout.
+
+WebKit's default cached build 2311 declares a macOS 26.2 minimum and could not launch on this host. A separate blank-page check also timed out using cached build 2359, whose declared minimum is 15.4. No WebKit physics result was obtained. Restore a working browser installation before repeating that gate.
+
+This record qualifies the standalone Release example functionally on Chromium and Firefox. Debug exports, WebKit/Safari, physical mobile devices, startup budgets, and sustained performance/memory acceptance remain separate gates. These hashes identify this build; embedding applications must qualify their own exact templates and any additional host changes before deployment.

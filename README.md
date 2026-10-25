@@ -23,7 +23,7 @@ At the [pinned Godot 4.7 revision](https://github.com/godotengine/godot/blob/5b4
 
 This choice couples the backend to a custom template, exact dependency versions, thread deployment requirements, and host rendering behavior. Builds take longer and the host owns its release and rollback artifacts. Moving the main loop does not guarantee faster downloads, shorter startup, or responsive in-game menus during a blocking operation. Those benefits and costs must be measured in the actual application.
 
-The upstream maintainer prefers a small Web build using the existing CMake project and official templates. That is a useful general-purpose support model. This fork carries the additional host configuration and its maintenance burden. The optional [WebGL readback patch](docs/web-worker-readback.md) applies to the documented proxied-context arrangement; it is not a change to Box3D's physics behavior.
+The upstream maintainer [prefers a small Web build](https://github.com/bearlikelion/godot-box3d/pull/26#pullrequestreview-5641515889) using the existing CMake project and official templates. That is a useful general-purpose support model. This fork carries the additional host configuration and its maintenance burden. The optional [WebGL readback patch](docs/web-worker-readback.md) applies to the documented proxied-context arrangement; it is not a change to Box3D's physics behavior.
 
 ## Branches and contributions
 

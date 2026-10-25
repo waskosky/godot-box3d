@@ -3,6 +3,8 @@
 This is an optional Godot host patch, not a Box3D physics change. The ordinary
 dynamic, single-threaded Web profile is unaffected and does not need it.
 
+The [standalone host validation record](static-embedding.md#recorded-validation-2026-10-25) covers a newer downstream candidate. The diagnostic history below retains the source revision and limits of the earlier host-specific build.
+
 It targets Godot 4.7 / Emscripten 4.0.20 worker-main templates that proxy WebGL
 onto the browser's main thread. It is not certification of hosts that transfer
 an `OffscreenCanvas` rendering context into a worker; qualify that different
