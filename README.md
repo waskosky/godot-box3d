@@ -30,7 +30,7 @@ This is my first time doing physics programming, and I am building the bridge be
 
 Requires Godot 4.3 or newer.
 Linux and Windows are tested; macOS universal builds are experimental.
-For browser exports, follow the [Web quick start](WEB_QUICKSTART.md) with matching custom templates.
+For browser exports, follow the [Web quick start](WEB_QUICKSTART.md) with official Godot 4.7 templates or the matching source-built alternatives.
 The [physics readiness guide](docs/physics-readiness.md) records the integration candidate's coverage and remaining acceptance gates.
 Worker threads, length units, and checking that the backend loaded are covered in [Installation](https://bearlikelion.github.io/godot-box3d/installation/).
 

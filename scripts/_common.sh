@@ -116,11 +116,19 @@ ensure_git_checkout() {
 
     require_command git
 
+    if is_git_checkout_root "$destination"; then
+        local actual
+        actual="$(git -C "$destination" rev-parse HEAD)"
+        [[ "$actual" == "$ref" ]] || fail "$name is already at $actual; expected $ref. Existing checkout preserved. Update it explicitly before retrying."
+        note "$name revision is correct; preserving the existing working tree: $actual"
+        return
+    fi
+
     if [[ -e "$destination" ]] && ! is_git_checkout_root "$destination"; then
         if [[ -n "$(find "$destination" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
             fail "$name destination exists and is not a Git checkout: $destination"
         fi
-        rm -rf "$destination"
+        rmdir "$destination"
     fi
 
     if ! is_git_checkout_root "$destination"; then
@@ -139,7 +147,7 @@ ensure_git_checkout() {
     resolved="$(git -C "$destination" rev-parse "${ref}^{commit}" 2>/dev/null || true)"
     [[ "$resolved" == "$ref" ]] || fail "$name did not resolve to the pinned revision $ref. Resolved: ${resolved:-<none>}"
 
-    git -C "$destination" checkout --detach --force "$ref"
+    git -C "$destination" checkout --detach "$ref"
     git -C "$destination" submodule update --init --recursive
 
     local actual

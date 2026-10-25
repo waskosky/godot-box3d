@@ -9,3 +9,6 @@
 - Deliver larger efforts as a small sequence of independently reviewable changes instead of one broad combined diff.
 - Treat `integration/next` as the downstream experiment and validation feed. It may combine validated work, but its unrelated history must not leak into upstream pull requests.
 - Before publishing, start from the latest upstream `main`, inspect the complete diff, and run the most relevant local checks.
+- Ordinary upstream Web support should use official Godot templates and the existing CMake build where practical.
+- Keep static embedding, host patches, custom template production, and extended browser qualification downstream unless the maintainer requests them.
+- Do not identify private consumers or expose their code, repository names, deployment details, or links in public changes and discussions.

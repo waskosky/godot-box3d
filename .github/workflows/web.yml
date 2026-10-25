@@ -93,6 +93,8 @@ jobs:
     env:
       GODOT_VERSION: 4.7-stable
       GODOT_ZIP_NAME: Godot_v4.7-stable_linux.x86_64
+      GODOT_SHA512: b639ca9c1ddea39bb3df89bd5283a51ca6047467abe6b25e9436566f2b2082ede633025073989ecf39c7d5d3c2493d80ea13e3af6dd5e261bbf89e462d6d2214
+      PLAYWRIGHT_VERSION: 1.61.0
     steps:
       - uses: actions/checkout@v7
 
@@ -116,9 +118,10 @@ jobs:
           curl -L --fail --retry 3 \
             -o "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" \
             "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/${GODOT_ZIP_NAME}.zip"
+          printf '%s  %s\n' "$GODOT_SHA512" "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" | sha512sum --check -
           unzip -o "$RUNNER_TEMP/${GODOT_ZIP_NAME}.zip" -d "$RUNNER_TEMP/godot"
           chmod +x "$RUNNER_TEMP/godot/${GODOT_ZIP_NAME}"
-          python3 -m pip install --disable-pip-version-check playwright
+          python3 -m pip install --disable-pip-version-check "playwright==$PLAYWRIGHT_VERSION"
           python3 -m playwright install --with-deps chromium
 
       - name: Export smoke project
@@ -148,8 +151,6 @@ jobs:
     needs: [web-extension, web-templates, web-smoke]
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v7
 
@@ -198,10 +199,23 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  release:
+    needs: package
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: godot-box3d-web-release
+          path: dist
+
       - name: Attach persistent assets to the tagged release
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" \
@@ -210,6 +224,6 @@ jobs:
               --title "$GITHUB_REF_NAME"
           fi
           gh release upload "$GITHUB_REF_NAME" \
-            "${{ steps.package-name.outputs.archive }}" \
-            "${{ steps.package-name.outputs.archive }}.sha256" \
+            "dist/godot-box3d-${GITHUB_REF_NAME}-web.zip" \
+            "dist/godot-box3d-${GITHUB_REF_NAME}-web.zip.sha256" \
             --clobber

@@ -37,7 +37,7 @@ Open the project with Godot 4.7 when using the supplied templates. Then:
 2. Select **Box3D Physics** and restart the editor.
 3. Create or edit a Web export preset.
 4. Enable **Extensions Support** and disable **Thread Support**.
-5. Set the custom debug and release templates to the two ZIPs from `web-export-templates/`.
+5. Install the official Godot 4.7 export templates and leave the custom template paths empty. The bundle's two ZIPs are an optional source-built alternative.
 6. Export the project normally.
 
 The equivalent project setting is:
@@ -153,11 +153,12 @@ for those separate gates.
 
 ## Important compatibility rules
 
-- Use the supplied custom templates. Standard Godot Web templates do not enable GDExtension dynamic linking.
+- Official Godot 4.7 templates include dynamic-link variants, selected by **Extensions Support**. Custom templates are optional for this profile; static embedding still requires a host-owned template.
 - Keep extension support enabled and thread support disabled for this profile.
 - The supported no-thread profile always runs Box3D with one worker.
 - Do not mix a side module and Godot template built with different Emscripten versions.
 - Rebuild both the side module and templates when changing the Godot or Emscripten pins.
+- Bootstrap preserves existing dependency checkouts and local edits. If a checkout differs from its pin, update it explicitly after saving your work, then rerun bootstrap.
 - The default build uses WebAssembly SIMD128. Use `BOX3D_DISABLE_SIMD=1 scripts/build_web.sh` only as a diagnostic fallback.
 
 The dependency versions used for the extension and matching templates are recorded in [`dependencies.lock`](dependencies.lock).
