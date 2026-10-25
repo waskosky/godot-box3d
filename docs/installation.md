@@ -10,7 +10,7 @@ title: Installation
 
 ## From a release
 
-For this fork, use a matching addon from [fork Releases](https://github.com/waskosky/godot-box3d/releases) when available or the [build workflow artifacts](https://github.com/waskosky/godot-box3d/actions). Upstream addons are separately available from [upstream Releases](https://github.com/bearlikelion/godot-box3d/releases). Copy `addons/godot-box3d/` into your project:
+For this fork, use a matching addon from [fork Releases](https://github.com/waskosky/godot-box3d-embedded/releases) when available or the [build workflow artifacts](https://github.com/waskosky/godot-box3d-embedded/actions). Upstream addons are separately available from [upstream Releases](https://github.com/bearlikelion/godot-box3d/releases). Copy `addons/godot-box3d/` into your project:
 
 ```
 your-project/

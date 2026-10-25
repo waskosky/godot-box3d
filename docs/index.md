@@ -1,11 +1,11 @@
 ---
-title: godot-box3d
+title: godot-box3d-embedded
 permalink: /
 ---
 
-# godot-box3d
+# godot-box3d-embedded
 
-This is [waskosky's downstream fork](https://github.com/waskosky/godot-box3d) of [bearlikelion/godot-box3d](https://github.com/bearlikelion/godot-box3d). It maintains static Web embedding and worker-main host support alongside general physics improvements. Read the [fork README](https://github.com/waskosky/godot-box3d#readme) for the branch policy and rationale, or the [static embedding guide]({{ '/static-embedding/' | relative_url }}) for the reusable host module and build recipe.
+This is [waskosky's downstream fork](https://github.com/waskosky/godot-box3d-embedded) of [bearlikelion/godot-box3d](https://github.com/bearlikelion/godot-box3d). It maintains static Web embedding and worker-main host support alongside general physics improvements. Read the [fork README](https://github.com/waskosky/godot-box3d-embedded#readme) for the branch policy and rationale, or the [static embedding guide]({{ '/static-embedding/' | relative_url }}) for the reusable host module and build recipe.
 
 A [GDExtension](https://docs.godotengine.org/en/stable/tutorials/scripting/gdextension/what_is_gdextension.html) that integrates [Box3D](https://github.com/erincatto/box3d), Erin Catto's 3D physics engine, into Godot 4 as a drop-in replacement for the built-in `PhysicsServer3D`.
 

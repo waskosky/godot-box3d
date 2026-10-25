@@ -17,8 +17,8 @@ These instructions build the downstream fork. The [static Web embedding guide](s
 ## Clone and build
 
 ```sh
-git clone --recurse-submodules https://github.com/waskosky/godot-box3d.git
-cd godot-box3d
+git clone --recurse-submodules https://github.com/waskosky/godot-box3d-embedded.git
+cd godot-box3d-embedded
 cmake -B build
 cmake --build build --parallel
 ```

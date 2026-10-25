@@ -1,6 +1,8 @@
-# godot-box3d — downstream Web builds
+# godot-box3d-embedded
 
-This is [waskosky's downstream fork](https://github.com/waskosky/godot-box3d) of [bearlikelion/godot-box3d](https://github.com/bearlikelion/godot-box3d). It integrates [Erin Catto's Box3D](https://github.com/erincatto/box3d) with Godot's `PhysicsServer3D`, keeping ordinary Godot physics nodes and scenes usable.
+This is [waskosky's downstream fork](https://github.com/waskosky/godot-box3d-embedded) of [bearlikelion/godot-box3d](https://github.com/bearlikelion/godot-box3d). It integrates [Erin Catto's Box3D](https://github.com/erincatto/box3d) with Godot's `PhysicsServer3D`, keeping ordinary Godot physics nodes and scenes usable.
+
+The repository name distinguishes this fork. Projects still use the `addons/godot-box3d/` addon directory and the `Box3D Physics` backend; runtime identifiers and APIs are unchanged.
 
 We maintain static embedding into custom Godot Web templates, application execution in a Web Worker, and the build tools and host patches needed for that configuration. General physics improvements continue to be offered upstream as focused pull requests. The upstream project's original motivation and development history belong to its author; see its [README](https://github.com/bearlikelion/godot-box3d#readme).
 
@@ -13,7 +15,7 @@ We maintain static embedding into custom Godot Web templates, application execut
 | Ordinary Web extension | A Wasm side module, using official Godot 4.7 dynamic-link templates | Start here for a normal addon export; follow the [Web quick start](WEB_QUICKSTART.md). |
 | Static worker-main host | Box3D and godot-cpp archives linked into a custom Godot template | Use when the application's main loop must run in a worker; follow [static embedding](docs/static-embedding.md). |
 
-For the ordinary Web profile, enable **Extensions Support**, disable **Thread Support**, select **Box3D Physics**, and use the Compatibility renderer. Fork builds and snapshots are listed in [this repository's Actions](https://github.com/waskosky/godot-box3d/actions) and [Releases](https://github.com/waskosky/godot-box3d/releases); check that the chosen artifact contains the required native editor and Web libraries. Upstream release addons remain available from [upstream Releases](https://github.com/bearlikelion/godot-box3d/releases), with their own feature set and dependency versions.
+For the ordinary Web profile, enable **Extensions Support**, disable **Thread Support**, select **Box3D Physics**, and use the Compatibility renderer. Fork builds and snapshots are listed in [this repository's Actions](https://github.com/waskosky/godot-box3d-embedded/actions) and [Releases](https://github.com/waskosky/godot-box3d-embedded/releases); check that the chosen artifact contains the required native editor and Web libraries. Upstream release addons remain available from [upstream Releases](https://github.com/bearlikelion/godot-box3d/releases), with their own feature set and dependency versions.
 
 ## Why maintain static embedding downstream?
 

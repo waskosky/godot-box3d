@@ -89,7 +89,7 @@ The [release qualification guide](release-qualification.md) covers startup, sust
 
 ## Recorded validation (2026-10-25)
 
-The standalone example was built from [source commit `83b5d55`](https://github.com/waskosky/godot-box3d/commit/83b5d55ce50b91dd43119f573b45228c843d49fe), using [that commit's dependency pins](https://github.com/waskosky/godot-box3d/blob/83b5d55ce50b91dd43119f573b45228c843d49fe/dependencies.lock). The physics adapter source is unchanged from the previously validated integration baseline `e7f81af`; this candidate adds the generic host module and downstream documentation/build support.
+The standalone example was built from [source commit `83b5d55`](https://github.com/waskosky/godot-box3d-embedded/commit/83b5d55ce50b91dd43119f573b45228c843d49fe), using [that commit's dependency pins](https://github.com/waskosky/godot-box3d-embedded/blob/83b5d55ce50b91dd43119f573b45228c843d49fe/dependencies.lock). The physics adapter source is unchanged from the previously validated integration baseline `e7f81af`; this candidate adds the generic host module and downstream documentation/build support.
 
 Fresh archives and a fresh Godot source build used Emscripten 4.0.20, SCons 4.8.1, all default engine modules, `target=template_release arch=wasm32 precision=single threads=yes dlink_enabled=no proxy_to_pthread=yes`, and the included readback patch. The host was macOS 15.7.1, x86_64, with Playwright 1.61.0.
 
