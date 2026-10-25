@@ -13,6 +13,7 @@ jobs:
     env:
       GODOT_ARCHIVE: Godot_v4.7-stable_linux.x86_64
       GODOT_SHA512: b639ca9c1ddea39bb3df89bd5283a51ca6047467abe6b25e9436566f2b2082ede633025073989ecf39c7d5d3c2493d80ea13e3af6dd5e261bbf89e462d6d2214
+      LIBGL_ALWAYS_SOFTWARE: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -32,7 +33,7 @@ jobs:
       - name: Set up pinned build tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential git pkg-config unzip
+          sudo apt-get install -y -qq build-essential git pkg-config unzip xvfb libgl1-mesa-dri libglx-mesa0
           scripts/setup_python_build_env.sh
           scripts/bootstrap_dependencies.sh
           scripts/setup_web_toolchain.sh
@@ -69,7 +70,7 @@ jobs:
               --template "dist/web-static-templates/templates/godot-box3d-static-web-$target.zip" \
               --output "build/static-web-$target"
             for browser in chromium firefox; do
-              .venv/bin/python scripts/run_web_smoke.py \
+              xvfb-run -a .venv/bin/python scripts/run_web_smoke.py --headed \
                 --dir "build/static-web-$target" --browser "$browser" --timeout 180 \
                 --output "build/static-web-results/$target-$browser.json" \
                 --screenshot "build/static-web-results/$target-$browser.png"
@@ -79,7 +80,7 @@ jobs:
       - name: Check Release physics and cleanup under sustained workload
         run: |
           for browser in chromium firefox; do
-            .venv/bin/python scripts/run_web_stress.py \
+            xvfb-run -a .venv/bin/python scripts/run_web_stress.py --headed \
               --dir build/static-web-release --browser "$browser" \
               --output "build/static-web-results/workload-$browser.json"
           done

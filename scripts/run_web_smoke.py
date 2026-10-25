@@ -5,6 +5,7 @@ import argparse
 import functools
 import http.server
 import json
+import os
 import socket
 import threading
 import time
@@ -49,6 +50,7 @@ def main() -> int:
     parser.add_argument("--browser", choices=("chromium", "firefox", "webkit"), default="chromium")
     parser.add_argument("--screenshot", default="")
     parser.add_argument("--output", type=Path, help="Retain the JSON result alongside screenshots.")
+    parser.add_argument("--headed", action="store_true")
     parser.add_argument("--timeout", type=float, default=45.0)
     parser.add_argument("--reloads", type=int, default=0, help="Additional page loads in the same browser context.")
     parser.add_argument("--observe-seconds", type=float, default=0.0, help="Watch for errors after the final PASS; not a performance or memory qualification.")
@@ -83,7 +85,9 @@ def main() -> int:
     loads: list[dict[str, object]] = []
     try:
         with sync_playwright() as playwright:
-            launch_options: dict[str, object] = {"headless": True}
+            launch_options: dict[str, object] = {"headless": not args.headed}
+            if args.browser == "firefox" and os.environ.get("LIBGL_ALWAYS_SOFTWARE") == "1":
+                launch_options["firefox_user_prefs"] = {"webgl.force-enabled": True}
             if args.browser_executable:
                 launch_options["executable_path"] = args.browser_executable
             browser = getattr(playwright, args.browser).launch(**launch_options)
@@ -134,6 +138,8 @@ def main() -> int:
     required = required_checks(console_lines)
     result = {
         "browser": args.browser,
+        "headed": args.headed,
+        "software_gl": os.environ.get("LIBGL_ALWAYS_SOFTWARE") == "1",
         "ok": len(loads) == args.reloads + 1 and all(load["ok"] for load in loads) and not errors,
         "required": required,
         "loads": loads,

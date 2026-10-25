@@ -63,6 +63,7 @@ def main() -> int:
     lines: list[str] = []
     result: dict = {}
     report: dict = {"browser": args.browser, "headed": args.headed, "host": platform.platform(), "profile": args.profile, "browser_args": args.browser_arg,
+                    "software_gl": os.environ.get("LIBGL_ALWAYS_SOFTWARE") == "1",
                     "cache_state": "warm-after-smoke" if args.warmup else "fresh-browser-context",
                     "host_cpu_count": os.cpu_count(), "host_load_average_start": os.getloadavg() if hasattr(os, "getloadavg") else None}
     manifest = args.dir / "EXPORT_MANIFEST.json"
@@ -71,6 +72,8 @@ def main() -> int:
     try:
         with sync_playwright() as playwright:
             options: dict = {"headless": not args.headed, "timeout": 30000}
+            if args.browser == "firefox" and report["software_gl"]:
+                options["firefox_user_prefs"] = {"webgl.force-enabled": True}
             if args.browser_executable:
                 options["executable_path"] = args.browser_executable
             if args.browser == "chromium":
@@ -130,7 +133,7 @@ def main() -> int:
             }""")
             report.update(page.evaluate("() => window.__box3dPageTiming()"))
             renderer = str(report["graphics"].get("renderer", "")).lower()
-            report["hardware_timing_eligible"] = bool(args.headed and renderer and not any(x in renderer for x in ("swiftshader", "llvmpipe", "software", "lavapipe")))
+            report["hardware_timing_eligible"] = bool(args.headed and not report["software_gl"] and renderer and not any(x in renderer for x in ("swiftshader", "llvmpipe", "software", "lavapipe")))
             page.screenshot(path=str(args.output.with_suffix(".final.png")))
             report["http_ok"] = bool(response and response.ok)
             browser.close()

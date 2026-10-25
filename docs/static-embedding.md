@@ -25,6 +25,8 @@ The build reuses engine compilation outputs on subsequent runs. `GODOT_BOX3D_STA
 
 The manually triggered [Static Web build and physics workflow](https://github.com/waskosky/godot-box3d-embedded/actions/workflows/web-static.yml) builds both hosts, runs the same physics smoke in Chromium and Firefox, and exercises Release workload cleanup. It retains the bundle, JSON results and screenshots. It does not run on every pull request.
 
+Linux CI uses [Xvfb for headed browsers](https://playwright.dev/docs/ci#running-headed) and Mesa software rendering. With the explicit `LIBGL_ALWAYS_SOFTWARE=1` environment, the runners enable Firefox's software WebGL fallback for that temporary browser context. This setting is recorded in results and always excludes hardware timing qualification. It does not change normal browser preferences or weaken physics checks. The initial Linux headless Firefox attempt could not create WebGL2 and never started the project.
+
 To export the unchanged fixture with a freshly built template:
 
 ```sh
