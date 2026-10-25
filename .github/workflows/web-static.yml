@@ -23,7 +23,8 @@ jobs:
           python-version: "3.13"
 
       - name: Restore engine compilation cache
-        uses: actions/cache@v5
+        id: engine-cache
+        uses: actions/cache/restore@v5
         with:
           path: .deps/godot-static-4.7-stable
           key: box3d-static-engine-v1-${{ runner.os }}-${{ hashFiles('dependencies.lock', 'scripts/build_web_static_templates.sh', 'patches/godot-4.7/web-worker-readback.patch', 'examples/godot_static/box3d_static/*') }}
@@ -40,6 +41,13 @@ jobs:
         env:
           MAX_JOBS: 4
         run: scripts/build_web_static_templates.sh
+
+      - name: Save compiled engine before browser qualification
+        if: steps.engine-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: .deps/godot-static-4.7-stable
+          key: ${{ steps.engine-cache.outputs.cache-primary-key }}
 
       - name: Install Godot and browsers
         run: |

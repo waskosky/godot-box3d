@@ -1,6 +1,7 @@
 extends Node3D
 
 const EXPECTED_ENGINE := "Box3D Physics"
+const WebWorkload = preload("res://stress_test.gd")
 
 class MovingPlatform extends AnimatableBody3D:
     var frames := 0
@@ -35,9 +36,9 @@ var _result_lines: Array[String] = []
 
 
 func _ready() -> void:
-    if OS.has_feature("web") and JavaScriptBridge.eval("new URLSearchParams(location.search).has('box3d_stress')"):
+    if OS.has_feature("web") and not WebWorkload.web_profile().is_empty():
         set_physics_process(false)
-        add_child(load("res://stress_test.gd").new())
+        add_child(WebWorkload.new())
         return
     _create_status_ui()
     _append_status("Godot Box3D Web smoke test")

@@ -24,9 +24,22 @@ var _last_report := 0
 var _last_frame_usec := 0
 
 
+static func web_profile() -> String:
+    if not OS.has_feature("web"):
+        return ""
+    # Interface calls proxy to the browser thread; eval reads a worker's URL.
+    var location: JavaScriptObject = JavaScriptBridge.get_interface("location")
+    var query: String = str(location.search).trim_prefix("?")
+    for argument in query.split("&"):
+        var fields: PackedStringArray = argument.split("=", true, 1)
+        if fields[0].uri_decode() == "box3d_stress":
+            return fields[1].uri_decode() if fields.size() > 1 and not fields[1].is_empty() else "representative"
+    return ""
+
+
 func _ready() -> void:
     if OS.has_feature("web"):
-        var requested: String = str(JavaScriptBridge.eval("new URLSearchParams(location.search).get('box3d_stress') || 'representative'"))
+        var requested: String = web_profile()
         if PROFILES.has(requested):
             _profile = requested
     elif "--stress" in OS.get_cmdline_user_args():
@@ -203,7 +216,8 @@ func _publish(value: Dictionary) -> void:
         detail = "%d construction / movement / cleanup cycles completed" % _records.size()
     _label.text = "Box3D Web workload: %s / %s\n%s\n%s" % [_profile, value.get("phase", ""), detail, "PASS so far" if _failures.is_empty() else "FAIL: " + str(_failures)]
     if OS.has_feature("web"):
-        JavaScriptBridge.eval("window.__box3dWebStress = " + JSON.stringify(value))
+        var browser: JavaScriptObject = JavaScriptBridge.get_interface("window")
+        browser.__box3dWebStress = JavaScriptBridge.get_interface("JSON").parse(JSON.stringify(value))
 
 
 func _run() -> void:

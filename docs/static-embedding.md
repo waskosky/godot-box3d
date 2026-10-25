@@ -97,6 +97,17 @@ Serve over HTTPS, or HTTP on localhost, with `Cross-Origin-Opener-Policy: same-o
 python3 scripts/serve_web_export.py /path/to/export --port 8060
 ```
 
+## Browser page communication
+
+In the pinned worker-main host, `JavaScriptBridge.eval()` executes in the application's worker context. Its `location` is the worker URL, and its globals are different from the page's. Use Godot's proxied JavaScript interfaces when reading the page URL or communicating with page UI:
+
+```gdscript
+var location: JavaScriptObject = JavaScriptBridge.get_interface("location")
+var page_query: String = str(location.search)
+```
+
+The workload fixture uses these interfaces both to select its query-string profile and to publish status on the browser's `window`. The same fixture then works with ordinary and worker-main exports. This routing is part of host integration; the workload's physics assertions are shared between the two profiles.
+
 ## Validate the exact candidate
 
 Copy `web_smoke_project` into an ignored build directory, change that copy's Web preset to the settings above, exclude its addon, and export with the freshly built custom ZIP. Keep the scene and physics assertions unchanged. The fixture's bundled descriptor is Web-only: use `--recovery-mode` for a headless export, or install your matching native addon before importing it in the editor. Then run:
