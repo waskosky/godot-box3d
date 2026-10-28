@@ -4,12 +4,68 @@ title: Web preview qualification
 
 # Web preview qualification
 
-Automation candidate: `ddcb1659b9adc707f83fb5fd821da85e20f5f5fd`.
-The [static workflow](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40242243192), [native build and physics suite](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40242243167), and [ordinary Web pipeline](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40242243207) retain separate qualification evidence. Consult each run's result; ordinary Web CI does not qualify static embedding.
+Consistency candidate: `9a4c0daa603753888e469ec6cf2717b0b4693a9a`.
+The [static workflow](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40746990330), [native build and physics suite](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40746980906), and [ordinary Web pipeline](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40746981088) retain separate qualification evidence. Ordinary Web CI does not qualify static embedding.
 
-The earlier [Linux static run](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40237979182) built both hosts and passed Release Chromium's ten checks. Headless Firefox could not create a WebGL2 context (`AllowWebgl2:false`), so it never started Godot. The retry uses headed browsers under Xvfb with an explicit Mesa software-rendering configuration. Its results remain ineligible for hardware timing claims.
+## Consistency refresh (2026-10-28)
 
-## Automated static results
+The refresh aligns ray and Viewport-picking regressions with the focused
+upstream candidates while preserving the fork's Box3D pin and heightmap mesh
+fallback. Internal recovery rays retain initial hits; public shape casts
+explicitly ignore initial overlaps. A no-hit `cast_motion()` now returns
+`[1.0, 1.0]` rather than an empty result. Native checks also verify that ignoring
+an initial overlap does not hide an obstacle farther along the path. The Web
+scene covers unobstructed and initially overlapping shape casts in its existing
+direct-query check.
+
+All 41 native tests passed locally on Godot 4.7/macOS and in CI on Linux,
+Windows and macOS, plus the Godot 4.3 compatibility and UBSan runs. The combined
+ASan/UBSan build also passed (build coverage, not an ASan runtime claim).
+Ordinary Web CI passed all ten Chromium smoke checks in 5.642 seconds and
+produced its package; its captured result text and scene geometry were inspected.
+
+Static Web CI restored the engine compilation cache, rebuilt the matching
+archives/hosts, and passed all four smoke runs under Xvfb/software GL:
+
+| Target | Browser | Physics smoke | Seconds to physics PASS |
+|---|---|---|---:|
+| Release | Chromium | All ten checks pass | 5.469 |
+| Release | Firefox | All ten checks pass | 5.418 |
+| Debug | Chromium | All ten checks pass | 4.277 |
+| Debug | Firefox | All ten checks pass | 4.868 |
+
+Both Release workloads completed six construction/movement/cleanup cycles with
+the active `Box3DPhysicsServer3D`, no captured errors and stable cleanup counts
+of seven nodes and three resources. First active workload was observed at
+1.693 seconds in Chromium and 2.879 seconds in Firefox. Both reports explicitly
+mark `hardware_timing_eligible=false`; these are CI observations, not device
+performance budgets.
+
+All four smoke frames and both workload loaded/final pairs were inspected.
+The final workload frames show completed cleanup with readable text. Missing
+glyphs recur in Release Firefox and Debug Chromium smoke captures, while the
+other two smoke captures are readable. This is not isolated to Firefox and
+does not establish hardware visual acceptance. Capture timing versus a
+rendering defect still needs a controlled comparison.
+
+The retained manifest identifies clean source `9a4c0da`, the original Box3D
+repository and unchanged dependency pins. The bundle checksum and enclosed
+artifact hashes were verified. Tested template SHA-256 values are:
+
+- Release: `fdfcef88cd7976157f5868136c2bfd4e49f6c949b9b0cb03d0b7fdde739c36e2`
+- Debug: `4caecb6e0ad75d8e0d1cd11b64be5db90035514b411c3900d6cb102079018996`
+
+The exported `smoke_test.gd` hash is
+`61a2548d39d89971f39af896ed9859317ec59cd94d3fe53029a9fc1351428415`;
+the unchanged workload fixture retains the hash recorded below. Documentation
+follow-ups do not replace this exact tested source/artifact identity.
+
+## Earlier automated static results (2026-10-25)
+
+Automation source: `ddcb1659b9adc707f83fb5fd821da85e20f5f5fd`.
+The earlier [static workflow](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40242243192), [native build and physics suite](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40242243167), and [ordinary Web pipeline](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40242243207) retain that source's separate qualification evidence.
+
+The initial [Linux static run](https://github.com/waskosky/godot-box3d-embedded/actions/runs/40237979182) built both hosts and passed Release Chromium's ten checks. Headless Firefox could not create a WebGL2 context (`AllowWebgl2:false`), so it never started Godot. The retry uses headed browsers under Xvfb with an explicit Mesa software-rendering configuration. Its results remain ineligible for hardware timing claims.
 
 The retry passed on source `ddcb165`. Both compiled templates, their matching static archives, dependency versions and build flags are recorded in the retained `BUILD_MANIFEST.json`. Engine compilation was restored from the previously saved cache; both targets still ran their archive build and SCons dependency checks.
 
@@ -64,6 +120,30 @@ Before measuring, provisional desktop goals were recorded: first active workload
 All six Chromium runs completed with no captured engine/browser errors and stable node/resource cleanup after the first-cycle warm-up. All six Firefox runs exceeded the unchanged 180-second limit. No physics failure was reported before those timeouts, but partial cycles do not pass lifetime acceptance. Selected loaded and final frames were inspected, including a Chromium completion and Firefox's incomplete cleanup state.
 
 Fresh means a new browser context, not a flushed operating-system cache. Warm means the unchanged ten-check smoke first passed in the same browser context, followed by workload navigation. Each startup cell is one observation, and first active is a polled workload state rather than first useful frame or isolated compilation time.
+
+## Local follow-up (2026-10-28)
+
+This diagnostic reused the earlier `18fc237` static single-worker export, not
+the newer consistency candidate. Playwright 1.61.0 was retained on the same
+macOS host. Firefox, Chromium and WebKit all timed out launching a blank headed
+browser within 15 seconds, before any Godot or physics code loaded. The browser
+session issue remains unresolved; unrelated host processes were left alone.
+
+Headless Firefox 151 passed all ten smoke checks in 47.675 seconds. A capture
+taken three seconds after completion had readable text and visible scene
+geometry. The workload's loaded/final captures also had readable text, but its
+final capture was an incomplete cleanup state, not a completed six-cycle run.
+These local captures do not reproduce the earlier Linux software-GL glyph
+artifacts, and do not establish whether those artifacts were persistent or
+capture-timing related.
+
+The unchanged 180-second workload deadline was exceeded again. First active
+workload was observed at 83.932 seconds, with one-minute host load averages
+of 14.1 at start and 24.4 at finish. No physics assertion failure was observed
+before timeout, but partial progress is not a passing workload result. The
+Intel-family renderer identification does not make this contended, headless
+run hardware-timing eligible. Startup, frame pacing and visual acceptance
+still need an idle host with a working headed browser.
 
 ## Interpretation and remaining gates
 

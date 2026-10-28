@@ -23,7 +23,11 @@ The native suite exercises actual Godot bodies and queries, including:
 - Animated kinematic platform carry, clean stops and small linear/angular
   targets; motion collisions report the platform's velocity.
 - Direct-query penetration pairs, mesh/heightmap targets, margins, rest normals
-  and rotating contact velocity; ray inside/backface flags and input face indices.
+  and rotating contact velocity; unobstructed shape casts and initial-overlap
+  exclusion without hiding later obstacles; ray inside/backface flags and input
+  face indices.
+- Viewport body/area picking, runtime toggles and an unpickable foreground
+  object, without filtering ordinary scripted rays.
 - Floor-angle classification, descending steps, rough rotated heightmaps,
   hole-boundary falls and moving/rotating platform jump detachment.
 - CCD against a thin wall, rotated off-center impulse/inertia, sleep/wake,
