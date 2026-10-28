@@ -189,6 +189,11 @@ func _check_direct_queries() -> bool:
     query.transform.origin.x = 32.0
     query.motion = Vector3(-2, 0, 0)
     ok = ok and absf(state.cast_motion(query)[0] - 0.575) < 0.001
+    query.margin = 0.0
+    query.motion = Vector3.UP
+    ok = ok and state.cast_motion(query) == PackedFloat32Array([1.0, 1.0])
+    query.transform.origin.x = 30.0
+    ok = ok and state.cast_motion(query) == PackedFloat32Array([1.0, 1.0])
     var ray := PhysicsRayQueryParameters3D.create(Vector3(30, 0, 0), Vector3(32, 0, 0), 32)
     ray.hit_from_inside = false
     ok = ok and state.intersect_ray(ray).is_empty()

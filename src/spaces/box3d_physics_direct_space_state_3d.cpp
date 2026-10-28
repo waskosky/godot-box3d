@@ -144,7 +144,8 @@ b3AABB proxy_bounds(const b3ShapeProxy& p_proxy, float p_margin) {
 
 struct RayContext {
 	const Box3DQueryFilter3D* filter = nullptr;
-	bool hit_from_inside = false;
+	// Internal casts keep native overlap hits; public ray queries supply their own flag.
+	bool hit_from_inside = true;
 	bool has_hit = false;
 	b3ShapeId shape_id = b3_nullShapeId;
 	b3Pos point{};
@@ -227,7 +228,8 @@ bool mesh_ray_triangle(b3Vec3 p_a, b3Vec3 p_b, b3Vec3 p_c, int p_triangle, void*
 
 bool backface_ray_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 	auto& ray = *static_cast<RayContext*>(p_context);
-	if (b3Shape_GetType(p_shape_id) != b3_meshShape) {
+	const b3ShapeType native_type = b3Shape_GetType(p_shape_id);
+	if (native_type != b3_meshShape && native_type != b3_heightShape) {
 		return true;
 	}
 	Box3DShapedObjectImpl3D* object = nullptr;
@@ -252,8 +254,12 @@ bool backface_ray_result_fcn(b3ShapeId p_shape_id, void* p_context) {
 			b3InvTransformPoint(transform, ray.origin), b3InvRotateVector(transform.q, ray.translation)};
 	const b3Vec3 end = b3MulAdd(ctx.origin, ray.fraction, ctx.translation);
 	const b3AABB bounds{b3Min(ctx.origin, end), b3Max(ctx.origin, end)};
-	const b3Mesh mesh = b3Shape_GetMesh(p_shape_id);
-	b3QueryMesh(&mesh, bounds, mesh_ray_triangle, &ctx);
+	if (native_type == b3_meshShape) {
+		const b3Mesh mesh = b3Shape_GetMesh(p_shape_id);
+		b3QueryMesh(&mesh, bounds, mesh_ray_triangle, &ctx);
+	} else {
+		b3QueryHeightField(b3Shape_GetHeightField(p_shape_id), bounds, mesh_ray_triangle, &ctx);
+	}
 	return true;
 }
 
@@ -608,13 +614,15 @@ bool Box3DPhysicsDirectSpaceState3D::_cast_motion(
 
 	RayContext context;
 	context.filter = &filter;
+	// Godot shape casts ignore targets already overlapped at the start.
+	context.hit_from_inside = false;
 
 	b3World_CastShape(space->get_world_id(), b3Vec3_zero, &shape_proxy.get_proxy(), godot_to_b3(p_motion), filter.filter, cast_result_fcn, &context);
 
 	if (!context.has_hit) {
 		*p_closest_safe = 1.0;
 		*p_closest_unsafe = 1.0;
-		return false;
+		return true;
 	}
 
 	const float motion_length = (float)p_motion.length();

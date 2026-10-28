@@ -65,6 +65,8 @@ func _run() -> void:
 	var clear := _query(sphere, Vector3(2, 0, 0))
 	clear.motion = Vector3(-3, 0, 0)
 	_check(state.get_rest_info(clear).is_empty(), "rest info ignores requested motion")
+	clear.motion = Vector3.UP
+	_check(state.cast_motion(clear) == PackedFloat32Array([1.0, 1.0]), "an unobstructed shape cast returns full travel, not an empty result")
 	var cast := _query(sphere, Vector3(2, 0, 0))
 	cast.motion = Vector3(-2, 0, 0)
 	var uninflated := state.cast_motion(cast)
@@ -72,6 +74,17 @@ func _run() -> void:
 	cast.margin = 0.1
 	var inflated := state.cast_motion(cast)
 	_check(absf(inflated[0] - 0.575) < 0.001 and inflated[1] >= inflated[0], "cast motion honors margin and ordered safe/unsafe fractions")
+	var embedded: PhysicsShapeQueryParameters3D = _query(sphere, Vector3.ZERO)
+	embedded.motion = Vector3(2, 0, 0)
+	var escaping: PackedFloat32Array = state.cast_motion(embedded)
+	_check(escaping == PackedFloat32Array([1.0, 1.0]), "shape casts ignore initial overlaps rather than treating them as inside ray hits: %s" % str(escaping))
+	var blocker: StaticBody3D = _body(box, Vector3(2, 0, 0))
+	await physics_frame
+	embedded.motion = Vector3(4, 0, 0)
+	var blocked: PackedFloat32Array = state.cast_motion(embedded)
+	_check(absf(blocked[1] - 0.3125) < 0.003 and blocked[0] <= blocked[1], "ignoring an initial overlap still finds the later obstacle")
+	blocker.queue_free()
+	await process_frame
 	var gap := _query(sphere, Vector3(0.8, 0, 0))
 	_check(state.intersect_shape(gap).is_empty(), "the gap is clear without a margin")
 	gap.margin = 0.1

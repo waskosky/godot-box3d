@@ -39,6 +39,7 @@ outward normal, and includes angular motion in the target's contact velocity.
 It checks the supplied pose and ignores `motion`. These queries are read-only.
 `cast_motion()` honors margin and backs its safe fraction off by native linear
 slop; safe and unsafe fractions need not be identical.
+It ignores targets overlapped at the starting pose while still detecting later obstacles; use `collide_shape()` to inspect initial overlaps. An unobstructed cast returns `[1.0, 1.0]`, not an empty result.
 
 Ray queries honor `hit_from_inside`. Concave ray hits report the original input
 triangle index, rather than the reordered native BVH index. A backface ray hit
@@ -55,6 +56,10 @@ Passing one of those as the query shape returns no results. They work normally a
 This is the current query adapter's support boundary, not a claim that Box3D
 cannot collide a convex body with those fixtures. Separation rays have their own
 query-only implementation.
+
+## Viewport picking and scripted rays
+
+Viewport physics picking honors `CollisionObject3D.input_ray_pickable` for bodies and areas, including changes at runtime. Unpickable objects do not block picking an eligible object behind them. This flag does not filter ordinary scripted `intersect_ray()` queries or change physical collisions.
 
 ## Friction and restitution combine differently
 
